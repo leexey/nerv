@@ -1,0 +1,515 @@
+#include "../main.hpp"
+#include "menu.hpp"
+#include "../features/shared/item_schema.hpp"
+#include "../features/skin_changer/skin_changer.hpp"
+#include "../features/glove_changer/glove_changer.hpp"
+#include "../sdk/config_system/config_system.hpp"
+#include "../valve/classes/c_cs_player_pawn.hpp"
+#include "../valve/interfaces/interfaces.hpp"
+#include "../sdk/includes/imgui/imgui_stdlib.h"
+#include <algorithm>
+#include <vector>
+#include <string>
+
+
+ImU32 GetRarityColor(int rarity) {
+    switch (rarity) {
+    case 1: return IM_COL32(176, 195, 217, 255); // Consumer
+    case 2: return IM_COL32(94, 152, 217, 255);  // Industrial
+    case 3: return IM_COL32(75, 105, 255, 255);  // Mil-Spec
+    case 4: return IM_COL32(136, 71, 255, 255);  // Restricted
+    case 5: return IM_COL32(211, 44, 230, 255);  // Classified
+    case 6: return IM_COL32(235, 75, 75, 255);   // Covert
+    case 7: return IM_COL32(228, 174, 57, 255);  // Contraband
+    default: return IM_COL32(255, 255, 255, 255); // Default
+    }
+}
+
+void c_menu::rebuild_fonts(float scale) {
+	auto& io = ImGui::GetIO();
+
+	io.Fonts->Clear();
+
+	ImFontConfig config;
+	config.SizePixels = 14.0f * scale; 
+	config.OversampleH = 2;
+	config.OversampleV = 1;
+	config.PixelSnapH = true; 
+
+	ImFontGlyphRangesBuilder Builder;
+	Builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+	Builder.AddRanges(io.Fonts->GetGlyphRangesCyrillic());
+	Builder.AddRanges(io.Fonts->GetGlyphRangesThai());
+	Builder.AddRanges(io.Fonts->GetGlyphRangesVietnamese());
+	Builder.AddRanges(io.Fonts->GetGlyphRangesKorean());
+	Builder.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
+	Builder.AddRanges(io.Fonts->GetGlyphRangesJapanese());
+	
+	ImVector<ImWchar> AllRanges;
+	Builder.BuildRanges(&AllRanges);
+
+	//  "tahoma.ttf"  "segoeuib.ttf" (Segoe UI)  "arial.ttf"
+	ImFont* font = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\arial.ttf", 14.0f * scale, &config, AllRanges.Data);
+
+	if (font == nullptr) {
+		io.Fonts->AddFontDefault(&config);
+	}
+
+	io.Fonts->Build();
+
+	ImGui_ImplDX11_InvalidateDeviceObjects();
+	ImGui_ImplDX11_CreateDeviceObjects();
+
+	m_dpi_scale = scale;
+	m_style_initialized = false;
+}
+static std::string get_key_name(int vk) {
+	if (vk == 0) return "None";
+
+	switch (vk) {
+	case VK_TAB: return "Tab";
+	case VK_LEFT: return "Left Arrow";
+	case VK_RIGHT: return "Right Arrow";
+	case VK_UP: return "Up Arrow";
+	case VK_DOWN: return "Down Arrow";
+	case VK_PRIOR: return "Page Up";
+	case VK_NEXT: return "Page Down";
+	case VK_HOME: return "Home";
+	case VK_INSERT: return "Insert";
+	case VK_DELETE: return "Delete";
+	case VK_BACK: return "Backspace";
+	case VK_SPACE: return "Space";
+	case VK_RETURN: return "Enter";
+	case VK_ESCAPE: return "Escape";
+	case VK_OEM_COMMA: return "Comma";
+	case VK_OEM_PERIOD: return "Period";
+	case VK_CAPITAL: return "Caps Lock";
+	case VK_SCROLL: return "Scroll Lock";
+	case VK_NUMLOCK: return "Num Lock";
+	case VK_SNAPSHOT: return "Print Screen";
+	case VK_PAUSE: return "Pause";
+	case VK_LSHIFT: return "Left Shift";
+	case VK_LCONTROL: return "Left Ctrl";
+	case VK_LMENU: return "Left Alt";
+	case VK_RSHIFT: return "Right Shift";
+	case VK_RCONTROL: return "Right Ctrl";
+	case VK_RMENU: return "Right Alt";
+	case VK_LBUTTON: return "Mouse 1";
+	case VK_RBUTTON: return "Mouse 2";
+	case VK_MBUTTON: return "Mouse 3";
+	case VK_XBUTTON1: return "Mouse 4";
+	case VK_XBUTTON2: return "Mouse 5";
+	}
+
+	
+	if (vk >= VK_F1 && vk <= VK_F12)
+		return "F" + std::to_string(vk - VK_F1 + 1);
+
+	if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z'))
+		return std::string(1, (char)vk);
+
+	char name[64];
+	if (GetKeyNameTextA(MapVirtualKeyA(vk, MAPVK_VK_TO_VSC) << 16, name, sizeof(name)))
+		return name;
+
+	return "Unknown (" + std::to_string(vk) + ")";
+}
+
+void c_menu::setup_style() {
+	if (m_style_initialized) return;
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	ImVec4* colors = style.Colors;
+	float scale = m_dpi_scale;
+
+	style.WindowRounding = 8.0f * scale;
+	style.ChildRounding = 6.0f * scale;
+	style.FrameRounding = 4.0f * scale;
+	style.WindowBorderSize = 1.0f;
+	style.FrameBorderSize = 1.0f;
+
+	colors[ImGuiCol_WindowBg] = ImVec4(0.98f, 0.98f, 1.00f, 1.00f);
+	colors[ImGuiCol_ChildBg] = ImVec4(0.96f, 0.96f, 0.98f, 1.00f);
+	colors[ImGuiCol_PopupBg] = ImVec4(0.96f, 0.96f, 0.98f, 1.00f);
+	colors[ImGuiCol_Border] = ImVec4(0.85f, 0.85f, 0.90f, 1.00f);
+	colors[ImGuiCol_FrameBg] = ImVec4(0.96f, 0.96f, 0.98f, 1.00f);
+	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.88f, 0.85f, 0.95f, 1.00f);
+	colors[ImGuiCol_FrameBgActive] = ImVec4(0.85f, 0.80f, 0.92f, 1.00f);
+	colors[ImGuiCol_TitleBg] = ImVec4(0.95f, 0.95f, 0.98f, 1.00f);
+	colors[ImGuiCol_TitleBgActive] = ImVec4(0.98f, 0.98f, 1.00f, 1.00f);
+	colors[ImGuiCol_CheckMark] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+	colors[ImGuiCol_SliderGrab] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+	colors[ImGuiCol_SliderGrabActive] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+	colors[ImGuiCol_Button] = ImVec4(0.90f, 0.88f, 0.95f, 1.00f);
+	colors[ImGuiCol_ButtonHovered] = ImVec4(0.85f, 0.80f, 0.95f, 1.00f);
+	colors[ImGuiCol_ButtonActive] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+	colors[ImGuiCol_Header] = ImVec4(0.92f, 0.90f, 0.98f, 1.00f);
+	colors[ImGuiCol_HeaderHovered] = ImVec4(0.85f, 0.80f, 0.95f, 1.00f);
+	colors[ImGuiCol_HeaderActive] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+	colors[ImGuiCol_Tab] = ImVec4(0.92f, 0.92f, 0.95f, 1.00f);
+	colors[ImGuiCol_TabHovered] = ImVec4(0.60f, 0.40f, 0.90f, 0.80f);
+	colors[ImGuiCol_TabActive] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+	colors[ImGuiCol_Text] = ImVec4(0.20f, 0.20f, 0.25f, 1.00f);
+	colors[ImGuiCol_ScrollbarBg] = ImVec4(0.96f, 0.96f, 0.98f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.90f, 0.88f, 0.95f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.85f, 0.80f, 0.95f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+	colors[ImGuiCol_TextSelectedBg] = ImVec4(0.85f, 0.80f, 0.95f, 1.00f);
+	style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.60f, 0.40f, 0.90f, 1.00f);
+
+	m_style_initialized = true;
+}
+
+static void draw_skins_tab() {
+	ImGui::Text("Knife Changer");
+	ImGui::Separator();
+	ImGui::Checkbox("Enabled##knife", &g_cfg->knife_changer.m_enabled);
+
+	if (g_cfg->knife_changer.m_enabled) {
+		static int last_knife = 0;
+
+		if (g_item_schema->is_initialized() && !g_item_schema->knife_names_cstr.empty()) {
+			ImGui::Combo("Knife Model", &g_cfg->knife_changer.m_knife,
+				g_item_schema->knife_names_cstr.data(),
+				(int)g_item_schema->knife_names_cstr.size());
+		}
+		else {
+			ImGui::TextDisabled("Loading knives...");
+		}
+
+		uint16_t selected_knife = 0;
+		if (g_item_schema->is_initialized() &&
+			g_cfg->knife_changer.m_knife < (int)g_item_schema->knives.size()) {
+			selected_knife = g_item_schema->knives[g_cfg->knife_changer.m_knife].definition_index;
+		}
+
+		if (last_knife != g_cfg->knife_changer.m_knife) {
+			g_cfg->knife_changer.m_paint_kit = 0;
+			last_knife = g_cfg->knife_changer.m_knife;
+		}
+
+		if (g_item_schema->is_initialized() && selected_knife > 0) {
+			auto& kits = g_item_schema->item_paint_kits[selected_knife];
+			if (!kits.empty()) {
+				
+				const char* preview_value = (g_cfg->knife_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->knife_changer.m_paint_kit].name.c_str() : "";
+
+				if (ImGui::BeginCombo("Knife Skin", preview_value)) {
+					for (int i = 0; i < (int)kits.size(); i++) {
+						const bool is_selected = (g_cfg->knife_changer.m_paint_kit == i);
+						ImGui::PushID(i);
+						if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
+							g_cfg->knife_changer.m_paint_kit = i;
+						}
+
+						ImU32 kit_color = GetRarityColor(kits[i].rarity);
+						ImVec2 p_min = ImGui::GetItemRectMin();
+						ImVec2 p_max = ImGui::GetItemRectMax();
+						ImGui::GetWindowDrawList()->AddRectFilled(
+							ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
+							ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
+							kit_color
+						);
+
+						if (is_selected) ImGui::SetItemDefaultFocus();
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+			}
+		}
+		if (g_item_schema->is_initialized()) {
+			static float temp_wear = g_cfg->knife_changer.m_wear;
+			float item_width = ImGui::CalcItemWidth();
+			float half_width = (item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+			ImGui::SetNextItemWidth(half_width);
+			if (ImGui::SliderFloat("##Wear", &temp_wear, 0.0f, 1.0f, "%.4f")) {
+				if (!ImGui::IsMouseDown(0))
+					g_cfg->knife_changer.m_wear = temp_wear;
+			}
+			if (!ImGui::IsItemActive() && temp_wear != g_cfg->knife_changer.m_wear)
+				g_cfg->knife_changer.m_wear = temp_wear;
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(half_width);
+			ImGui::InputInt("Wear / Seed", &g_cfg->knife_changer.m_seed, 0, 0);
+			ImGui::InputText("Custom Name", g_cfg->knife_changer.m_custom_name,
+				sizeof(g_cfg->knife_changer.m_custom_name));
+		}
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Glove Changer");
+	ImGui::Separator();
+	ImGui::Checkbox("Enabled##glove", &g_cfg->glove_changer.m_enabled);
+
+	if (g_cfg->glove_changer.m_enabled) {
+		static int last_glove = 0;
+
+		if (g_item_schema->is_initialized() && !g_item_schema->glove_names_cstr.empty()) {
+			ImGui::Combo("Glove Model", &g_cfg->glove_changer.m_glove,
+				g_item_schema->glove_names_cstr.data(),
+				(int)g_item_schema->glove_names_cstr.size());
+		}
+		else {
+			ImGui::TextDisabled("Loading gloves...");
+		}
+
+		uint16_t selected_glove = 0;
+		if (g_item_schema->is_initialized() &&
+			g_cfg->glove_changer.m_glove < (int)g_item_schema->gloves.size()) {
+			selected_glove = g_item_schema->gloves[g_cfg->glove_changer.m_glove].definition_index;
+		}
+
+		if (last_glove != g_cfg->glove_changer.m_glove) {
+			auto& glove_skins = g_item_schema->get_paint_kit_names_for_item(selected_glove);
+			g_cfg->glove_changer.m_paint_kit = (glove_skins.size() > 1) ? 1 : 0;
+			last_glove = g_cfg->glove_changer.m_glove;
+		}
+		if (g_item_schema->is_initialized() && selected_glove > 0) {
+			auto& kits = g_item_schema->item_paint_kits[selected_glove];
+			if (!kits.empty()) {
+				const char* preview_value = (g_cfg->glove_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->glove_changer.m_paint_kit].name.c_str() : "";
+
+				if (ImGui::BeginCombo("Glove Skin", preview_value)) {
+					for (int i = 0; i < (int)kits.size(); i++) {
+						const bool is_selected = (g_cfg->glove_changer.m_paint_kit == i);
+						ImGui::PushID(i);
+						if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
+							g_cfg->glove_changer.m_paint_kit = i;
+						}
+
+						ImU32 kit_color = GetRarityColor(kits[i].rarity);
+						ImVec2 p_min = ImGui::GetItemRectMin();
+						ImVec2 p_max = ImGui::GetItemRectMax();
+						ImGui::GetWindowDrawList()->AddRectFilled(
+							ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
+							ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
+							kit_color
+						);
+
+						if (is_selected) ImGui::SetItemDefaultFocus();
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+			}
+		}
+		if (g_item_schema->is_initialized()) {
+			static float temp_glove_wear = g_cfg->glove_changer.m_wear;
+			float glove_item_width = ImGui::CalcItemWidth();
+			float glove_half_width = (glove_item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+			ImGui::SetNextItemWidth(glove_half_width);
+			if (ImGui::SliderFloat("##GloveWear", &temp_glove_wear, 0.0f, 1.0f, "%.4f")) {
+				if (!ImGui::IsMouseDown(0))
+					g_cfg->glove_changer.m_wear = temp_glove_wear;
+			}
+			if (!ImGui::IsItemActive() && temp_glove_wear != g_cfg->glove_changer.m_wear)
+				g_cfg->glove_changer.m_wear = temp_glove_wear;
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(glove_half_width);
+			ImGui::InputInt("Wear / Seed##glove", &g_cfg->glove_changer.m_seed, 0, 0);
+		}
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Skin Changer");
+	ImGui::Separator();
+	ImGui::Checkbox("Enabled##skin", &g_cfg->skin_changer.m_enabled);
+
+	if (g_cfg->skin_changer.m_enabled) {
+		if (g_item_schema->is_initialized() && !g_item_schema->weapon_names_cstr.empty()) {
+			ImGui::Combo("Weapon", &g_cfg->skin_changer.m_selected_weapon,
+				g_item_schema->weapon_names_cstr.data(),
+				(int)g_item_schema->weapon_names_cstr.size());
+		}
+		else {
+			ImGui::TextDisabled("Loading weapons...");
+		}
+		
+		uint16_t selected_weapon_def = 0;
+		if (g_item_schema->is_initialized() && g_cfg->skin_changer.m_selected_weapon < (int)g_item_schema->weapons.size()) {
+			selected_weapon_def = g_item_schema->weapons[g_cfg->skin_changer.m_selected_weapon].definition_index;
+		}
+
+		if (g_item_schema->is_initialized() && selected_weapon_def > 0) {
+			int config_index = c_config::skin_changer_t::get_config_index(selected_weapon_def);
+			auto& weapon_skin = g_cfg->skin_changer.weapon_skins[config_index];
+
+			auto& kits = g_item_schema->item_paint_kits[selected_weapon_def];
+			if (!kits.empty()) {
+				const char* preview_value = (weapon_skin.paint_kit < (int)kits.size()) ? kits[weapon_skin.paint_kit].name.c_str() : "";
+
+				if (ImGui::BeginCombo("Skin##weapon_skin", preview_value)) {
+					for (int i = 0; i < (int)kits.size(); i++) {
+						const bool is_selected = (weapon_skin.paint_kit == i);
+						ImGui::PushID(i);
+						if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
+							weapon_skin.paint_kit = i;
+						}
+
+						ImU32 kit_color = GetRarityColor(kits[i].rarity);
+						ImVec2 p_min = ImGui::GetItemRectMin();
+						ImVec2 p_max = ImGui::GetItemRectMax();
+						ImGui::GetWindowDrawList()->AddRectFilled(
+							ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
+							ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
+							kit_color
+						);
+
+						if (is_selected) ImGui::SetItemDefaultFocus();
+						ImGui::PopID();
+					}
+					ImGui::EndCombo();
+				}
+			}
+			
+			float weapon_item_width = ImGui::CalcItemWidth();
+			float weapon_half_width = (weapon_item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+			ImGui::SetNextItemWidth(weapon_half_width);
+			ImGui::SliderFloat("##WeaponWear", &weapon_skin.wear, 0.0f, 1.0f, "%.4f");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(weapon_half_width);
+			ImGui::InputInt("Wear / Seed##weapon", &weapon_skin.seed, 0, 0);
+			ImGui::InputText("Name##weapon_name", weapon_skin.custom_name,
+				sizeof(weapon_skin.custom_name));
+
+			if (ImGui::Button("Apply Skins##skin_apply")) {
+				g_skin_changer->should_update = true;
+			}
+		}
+	}
+	
+	ImGui::Spacing();
+	ImGui::Text("Player Model Changer");
+	ImGui::Separator();
+
+	ImGui::Text("Player Model Path");
+	ImGui::InputText("##CustomModel", &g_cfg->sPathToModel);
+	if (ImGui::Button("Should Update"))
+	{
+		g_cfg->bShouldUpdate = true;
+	}
+}
+
+static void draw_config_tab(float scale) {
+	ImGui::Text("Config System");
+	ImGui::Separator();
+
+	g_config_system->refresh();
+	auto& configs = g_config_system->get_config_files();
+
+	ImGui::Text("Saved Configs:");
+	ImGui::BeginChild("config_list", ImVec2(0, 150.0f * scale), true);
+	{
+		for (const auto& cfg : configs) {
+			bool is_selected = (g_config_system->m_selected_config == cfg);
+			if (ImGui::Selectable(cfg.c_str(), is_selected))
+				g_config_system->m_selected_config = cfg;
+		}
+	}
+	ImGui::EndChild();
+
+	static char config_name[64] = "";
+	ImGui::InputText("Config Name", config_name, sizeof(config_name));
+
+	ImGui::Spacing();
+
+	if (ImGui::Button("Create", ImVec2(80.0f * scale, 0))) {
+		if (strlen(config_name) > 0) {
+			g_config_system->save(config_name);
+			g_config_system->m_selected_config = config_name;
+			config_name[0] = '\0';
+		}
+	}
+	ImGui::SameLine();
+
+	if (ImGui::Button("Save", ImVec2(80.0f * scale, 0))) {
+		if (!g_config_system->m_selected_config.empty())
+			g_config_system->save(g_config_system->m_selected_config);
+	}
+	ImGui::SameLine();
+
+	if (ImGui::Button("Load", ImVec2(80.0f * scale, 0))) {
+		if (!g_config_system->m_selected_config.empty())
+			g_config_system->load(g_config_system->m_selected_config);
+	}
+
+	if (ImGui::Button("Delete", ImVec2(80.0f * scale, 0))) {
+		if (!g_config_system->m_selected_config.empty()) {
+			g_config_system->remove(g_config_system->m_selected_config);
+			g_config_system->m_selected_config.clear();
+		}
+	}
+	ImGui::SameLine();
+
+	if (ImGui::Button("Reset", ImVec2(80.0f * scale, 0)))
+		g_config_system->reset();
+	ImGui::SameLine();
+
+	if (ImGui::Button("Refresh", ImVec2(80.0f * scale, 0)))
+		g_config_system->refresh();
+}
+
+bool g_waiting_for_key = false;
+
+static void draw_settings_tab() {
+	ImGui::Text("Settings");
+	ImGui::Separator();
+
+	ImGui::Spacing();
+	ImGui::Text("Menu key");
+	ImGui::Separator();
+
+	std::string btn_label = g_waiting_for_key ?
+		"Press a key..." :
+		get_key_name(g_cfg->misc.m_menu_key);
+
+	if (ImGui::Button(btn_label.c_str(), ImVec2(200, 0))) {
+		g_waiting_for_key = true;
+	}
+}
+
+void c_menu::draw() {
+	if (!m_opened)
+		return;
+
+	setup_style();
+
+	float scale = m_dpi_scale;
+	ImVec2 window_size(520.0f * scale, 480.0f * scale);
+
+	ImGui::SetNextWindowSize(window_size, ImGuiCond_Once);
+	ImGui::Begin("Nerv", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+	ImGui::BeginChild("tabs", ImVec2(100.0f * scale, 0), true);
+	{
+		static constexpr const char* tabs[]{ "Skins", "Config","Settings"};
+
+		for (std::size_t i = 0; i < IM_ARRAYSIZE(tabs); ++i) {
+			if (ImGui::Selectable(tabs[i], m_selected_tab == static_cast<int>(i)))
+				m_selected_tab = static_cast<int>(i);
+		}
+	}
+	ImGui::EndChild();
+	ImGui::SameLine();
+
+	if (m_selected_tab == 0) {
+		ImGui::BeginChild("skins_content", ImVec2(0, 0), true);
+		draw_skins_tab();
+		ImGui::EndChild();
+	}
+
+	if (m_selected_tab == 1) {
+		ImGui::BeginChild("config_content", ImVec2(0, 0), true);
+		draw_config_tab(scale);
+		ImGui::EndChild();
+	}
+
+	if (m_selected_tab == 2) {
+		ImGui::BeginChild("settings_content", ImVec2(0, 0), true);
+		draw_settings_tab();
+		ImGui::EndChild();
+	}
+
+	ImGui::End();
+}
