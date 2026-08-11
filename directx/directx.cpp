@@ -1,33 +1,19 @@
-﻿#include "../main.hpp"
-#include "directx.hpp"
-#include "../menu/menu.hpp"
-#include "../hooks/hooks.hpp"
-#include <windowsx.h>
-#include"../sdk/config_system/config_system.hpp"
-
-using namespace hooks;
+﻿#include <windowsx.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 
+#include "../main.hpp"
+#include "directx.hpp"
+#include "../menu/menu.hpp"
+#include "../hooks/hooks.hpp"
+#include"../sdk/config_system/config_system.hpp"
+
+using namespace hooks;
+
+extern bool g_waiting_for_key;
 
 IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-static bool g_first_time_opened = true;
-static bool g_force_refresh_needed = false;
-static void force_cursor_refresh(HWND hwnd)
-{
-	//while (::ShowCursor(TRUE) < 0);
-	//::SetCursor(::LoadCursor(NULL, IDC_ARROW));
-
-	//::ReleaseCapture();
-
-	//::SendMessageA(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-	//::SendMessageA(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-
-	//::InvalidateRect(hwnd, NULL, FALSE);
-}
-extern bool g_waiting_for_key;
 
 static LRESULT CALLBACK wnd_proc_hook(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	
@@ -251,8 +237,6 @@ void c_directx::start_frame(IDXGISwapChain* swap_chain)
 		{
 			m_last_dpi_scale = 1.0f;
 		}
-
-		//force_cursor_refresh(m_window);
 
 		m_started = true;
 	}
