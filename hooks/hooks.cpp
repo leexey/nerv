@@ -192,7 +192,7 @@ __int64 __fastcall hooks::level_init::hk_level_init(void* rcx, void* rdx) {
 	}
 
 	if (g_cfg->glove_changer.m_enabled) {
-		g_glove_changer->should_update = true;
+		//g_glove_changer->should_update = true;
 	}
 
 	return original(rcx, rdx);
@@ -213,7 +213,7 @@ bool __fastcall hooks::fire_event_client_side::hk_fire_event_client_side(void* p
 	if ((event_hash == event_hashes::round_start || event_hash == event_hashes::item_purchase))
 	{
 		g_skin_changer->should_update |= g_cfg->knife_changer.m_enabled || g_cfg->skin_changer.m_enabled;
-		g_glove_changer->should_update |= g_cfg->glove_changer.m_enabled;
+		//g_glove_changer->should_update |= g_cfg->glove_changer.m_enabled;
 		return original(p_game_event_manager, p_game_event);
 	}
 

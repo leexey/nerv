@@ -13,16 +13,16 @@
 
 
 ImU32 GetRarityColor(int rarity) {
-    switch (rarity) {
-    case 1: return IM_COL32(176, 195, 217, 255); // Consumer
-    case 2: return IM_COL32(94, 152, 217, 255);  // Industrial
-    case 3: return IM_COL32(75, 105, 255, 255);  // Mil-Spec
-    case 4: return IM_COL32(136, 71, 255, 255);  // Restricted
-    case 5: return IM_COL32(211, 44, 230, 255);  // Classified
-    case 6: return IM_COL32(235, 75, 75, 255);   // Covert
-    case 7: return IM_COL32(228, 174, 57, 255);  // Contraband
-    default: return IM_COL32(255, 255, 255, 255); // Default
-    }
+	switch (rarity) {
+	case 1: return IM_COL32(176, 195, 217, 255); // Consumer
+	case 2: return IM_COL32(94, 152, 217, 255);  // Industrial
+	case 3: return IM_COL32(75, 105, 255, 255);  // Mil-Spec
+	case 4: return IM_COL32(136, 71, 255, 255);  // Restricted
+	case 5: return IM_COL32(211, 44, 230, 255);  // Classified
+	case 6: return IM_COL32(235, 75, 75, 255);   // Covert
+	case 7: return IM_COL32(228, 174, 57, 255);  // Contraband
+	default: return IM_COL32(255, 255, 255, 255); // Default
+	}
 }
 
 void c_menu::rebuild_fonts(float scale) {
@@ -31,10 +31,10 @@ void c_menu::rebuild_fonts(float scale) {
 	io.Fonts->Clear();
 
 	ImFontConfig config;
-	config.SizePixels = 14.0f * scale; 
+	config.SizePixels = 14.0f * scale;
 	config.OversampleH = 2;
 	config.OversampleV = 1;
-	config.PixelSnapH = true; 
+	config.PixelSnapH = true;
 
 	ImFontGlyphRangesBuilder Builder;
 	Builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
@@ -44,7 +44,7 @@ void c_menu::rebuild_fonts(float scale) {
 	Builder.AddRanges(io.Fonts->GetGlyphRangesKorean());
 	Builder.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
 	Builder.AddRanges(io.Fonts->GetGlyphRangesJapanese());
-	
+
 	ImVector<ImWchar> AllRanges;
 	Builder.BuildRanges(&AllRanges);
 
@@ -101,7 +101,7 @@ static std::string get_key_name(int vk) {
 	case VK_XBUTTON2: return "Mouse 5";
 	}
 
-	
+
 	if (vk >= VK_F1 && vk <= VK_F12)
 		return "F" + std::to_string(vk - VK_F1 + 1);
 
@@ -167,73 +167,85 @@ static void draw_skins_tab() {
 
 	if (g_cfg->knife_changer.m_enabled) {
 		static int last_knife = 0;
+		static ImGuiTextFilter filter;
+		uint16_t selected_knife = 0;
 
-		if (g_item_schema->is_initialized() && !g_item_schema->knife_names_cstr.empty()) {
+		const bool is_parsed = g_item_schema->is_initialized() && !g_item_schema->knife_names_cstr.empty();
+
+		if (is_parsed) {
 			ImGui::Combo("Knife Model", &g_cfg->knife_changer.m_knife,
 				g_item_schema->knife_names_cstr.data(),
 				(int)g_item_schema->knife_names_cstr.size());
-		}
-		else {
-			ImGui::TextDisabled("Loading knives...");
-		}
 
-		uint16_t selected_knife = 0;
-		if (g_item_schema->is_initialized() &&
-			g_cfg->knife_changer.m_knife < (int)g_item_schema->knives.size()) {
-			selected_knife = g_item_schema->knives[g_cfg->knife_changer.m_knife].definition_index;
-		}
+			if (g_cfg->knife_changer.m_knife < (int)g_item_schema->knives.size()) {
+				selected_knife = g_item_schema->knives[g_cfg->knife_changer.m_knife].definition_index;
+			}
 
-		if (last_knife != g_cfg->knife_changer.m_knife) {
-			g_cfg->knife_changer.m_paint_kit = 0;
-			last_knife = g_cfg->knife_changer.m_knife;
-		}
+			if (last_knife != g_cfg->knife_changer.m_knife) {
+				g_cfg->knife_changer.m_paint_kit = 0;
+				last_knife = g_cfg->knife_changer.m_knife;
+			}
 
-		if (g_item_schema->is_initialized() && selected_knife > 0) {
-			auto& kits = g_item_schema->item_paint_kits[selected_knife];
-			if (!kits.empty()) {
-				
-				const char* preview_value = (g_cfg->knife_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->knife_changer.m_paint_kit].name.c_str() : "";
+			const bool are_settings_visible = selected_knife > 0 && selected_knife != WEAPON_KNIFE_T && selected_knife != WEAPON_KNIFE && g_cfg->knife_changer.m_knife;
 
-				if (ImGui::BeginCombo("Knife Skin", preview_value)) {
-					for (int i = 0; i < (int)kits.size(); i++) {
-						const bool is_selected = (g_cfg->knife_changer.m_paint_kit == i);
-						ImGui::PushID(i);
-						if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
-							g_cfg->knife_changer.m_paint_kit = i;
+			if (are_settings_visible) {
+				auto& kits = g_item_schema->item_paint_kits[selected_knife];
+				if (!kits.empty()) {
+
+					filter.Draw("##FilterKnife"); ImGui::SameLine(); ImGui::Text(("Search"));
+
+					const char* preview_value = (g_cfg->knife_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->knife_changer.m_paint_kit].name.c_str() : "";
+
+					if (ImGui::BeginCombo("Knife Skin", preview_value)) {
+						for (int i = 0; i < (int)kits.size(); i++) {
+							const bool is_selected = (g_cfg->knife_changer.m_paint_kit == i);
+
+							if (filter.PassFilter(kits[i].name.c_str())) {
+								ImGui::PushID(i);
+
+								if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
+									g_cfg->knife_changer.m_paint_kit = i;
+								}
+
+								ImU32 kit_color = GetRarityColor(kits[i].rarity);
+								ImVec2 p_min = ImGui::GetItemRectMin();
+								ImVec2 p_max = ImGui::GetItemRectMax();
+								ImGui::GetWindowDrawList()->AddRectFilled(
+									ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
+									ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
+									kit_color
+								);
+
+								if (is_selected) ImGui::SetItemDefaultFocus();
+
+								ImGui::PopID();
+							}
 						}
-
-						ImU32 kit_color = GetRarityColor(kits[i].rarity);
-						ImVec2 p_min = ImGui::GetItemRectMin();
-						ImVec2 p_max = ImGui::GetItemRectMax();
-						ImGui::GetWindowDrawList()->AddRectFilled(
-							ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
-							ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
-							kit_color
-						);
-
-						if (is_selected) ImGui::SetItemDefaultFocus();
-						ImGui::PopID();
+						ImGui::EndCombo();
 					}
-					ImGui::EndCombo();
+				}
+
+				if (g_cfg->knife_changer.m_paint_kit) {
+					static float temp_wear = g_cfg->knife_changer.m_wear;
+					float item_width = ImGui::CalcItemWidth();
+					float half_width = (item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+					ImGui::SetNextItemWidth(half_width);
+					if (ImGui::SliderFloat("##Wear", &temp_wear, 0.0f, 1.0f, "%.4f")) {
+						if (!ImGui::IsMouseDown(0))
+							g_cfg->knife_changer.m_wear = temp_wear;
+					}
+					if (!ImGui::IsItemActive() && temp_wear != g_cfg->knife_changer.m_wear)
+						g_cfg->knife_changer.m_wear = temp_wear;
+					ImGui::SameLine();
+					ImGui::SetNextItemWidth(half_width);
+					ImGui::InputInt("Wear / Seed", &g_cfg->knife_changer.m_seed, 0, 0);
+					ImGui::InputText("Custom Name", g_cfg->knife_changer.m_custom_name,
+						sizeof(g_cfg->knife_changer.m_custom_name));
 				}
 			}
 		}
-		if (g_item_schema->is_initialized()) {
-			static float temp_wear = g_cfg->knife_changer.m_wear;
-			float item_width = ImGui::CalcItemWidth();
-			float half_width = (item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
-			ImGui::SetNextItemWidth(half_width);
-			if (ImGui::SliderFloat("##Wear", &temp_wear, 0.0f, 1.0f, "%.4f")) {
-				if (!ImGui::IsMouseDown(0))
-					g_cfg->knife_changer.m_wear = temp_wear;
-			}
-			if (!ImGui::IsItemActive() && temp_wear != g_cfg->knife_changer.m_wear)
-				g_cfg->knife_changer.m_wear = temp_wear;
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(half_width);
-			ImGui::InputInt("Wear / Seed", &g_cfg->knife_changer.m_seed, 0, 0);
-			ImGui::InputText("Custom Name", g_cfg->knife_changer.m_custom_name,
-				sizeof(g_cfg->knife_changer.m_custom_name));
+		else {
+			ImGui::TextDisabled("Loading knives...");
 		}
 	}
 
@@ -244,70 +256,79 @@ static void draw_skins_tab() {
 
 	if (g_cfg->glove_changer.m_enabled) {
 		static int last_glove = 0;
+		static ImGuiTextFilter filter;
+		uint16_t selected_glove = 0;
 
-		if (g_item_schema->is_initialized() && !g_item_schema->glove_names_cstr.empty()) {
+		const bool is_parsed = g_item_schema->is_initialized() && !g_item_schema->glove_names_cstr.empty();
+
+		if (is_parsed) {
 			ImGui::Combo("Glove Model", &g_cfg->glove_changer.m_glove,
 				g_item_schema->glove_names_cstr.data(),
 				(int)g_item_schema->glove_names_cstr.size());
-		}
-		else {
-			ImGui::TextDisabled("Loading gloves...");
-		}
 
-		uint16_t selected_glove = 0;
-		if (g_item_schema->is_initialized() &&
-			g_cfg->glove_changer.m_glove < (int)g_item_schema->gloves.size()) {
-			selected_glove = g_item_schema->gloves[g_cfg->glove_changer.m_glove].definition_index;
-		}
+			if (g_cfg->glove_changer.m_glove < (int)g_item_schema->gloves.size()) {
+				selected_glove = g_item_schema->gloves[g_cfg->glove_changer.m_glove].definition_index;
+			}
 
-		if (last_glove != g_cfg->glove_changer.m_glove) {
-			auto& glove_skins = g_item_schema->get_paint_kit_names_for_item(selected_glove);
-			g_cfg->glove_changer.m_paint_kit = (glove_skins.size() > 1) ? 1 : 0;
-			last_glove = g_cfg->glove_changer.m_glove;
-		}
-		if (g_item_schema->is_initialized() && selected_glove > 0) {
-			auto& kits = g_item_schema->item_paint_kits[selected_glove];
-			if (!kits.empty()) {
-				const char* preview_value = (g_cfg->glove_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->glove_changer.m_paint_kit].name.c_str() : "";
+			if (last_glove != g_cfg->glove_changer.m_glove) {
+				auto& glove_skins = g_item_schema->get_paint_kit_names_for_item(selected_glove);
+				g_cfg->glove_changer.m_paint_kit = (glove_skins.size() > 1) ? 1 : 0;
+				last_glove = g_cfg->glove_changer.m_glove;
+			}
+			if (selected_glove) {
+				auto& kits = g_item_schema->item_paint_kits[selected_glove];
+				if (!kits.empty()) {
+					const char* preview_value = (g_cfg->glove_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->glove_changer.m_paint_kit].name.c_str() : "";
 
-				if (ImGui::BeginCombo("Glove Skin", preview_value)) {
-					for (int i = 0; i < (int)kits.size(); i++) {
-						const bool is_selected = (g_cfg->glove_changer.m_paint_kit == i);
-						ImGui::PushID(i);
-						if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
-							g_cfg->glove_changer.m_paint_kit = i;
+					filter.Draw("##FilterGlove"); ImGui::SameLine(); ImGui::Text(("Search"));
+
+					if (ImGui::BeginCombo("Glove Skin", preview_value)) {
+						for (int i = 0; i < (int)kits.size(); i++) {
+							const bool is_selected = (g_cfg->glove_changer.m_paint_kit == i);
+
+							if (filter.PassFilter(kits[i].name.c_str())) {
+								ImGui::PushID(i);
+								if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
+									g_cfg->glove_changer.m_paint_kit = i;
+								}
+
+								ImU32 kit_color = GetRarityColor(kits[i].rarity);
+								ImVec2 p_min = ImGui::GetItemRectMin();
+								ImVec2 p_max = ImGui::GetItemRectMax();
+								ImGui::GetWindowDrawList()->AddRectFilled(
+									ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
+									ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
+									kit_color
+								);
+
+								if (is_selected) ImGui::SetItemDefaultFocus();
+								ImGui::PopID();
+							}
 						}
-
-						ImU32 kit_color = GetRarityColor(kits[i].rarity);
-						ImVec2 p_min = ImGui::GetItemRectMin();
-						ImVec2 p_max = ImGui::GetItemRectMax();
-						ImGui::GetWindowDrawList()->AddRectFilled(
-							ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
-							ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
-							kit_color
-						);
-
-						if (is_selected) ImGui::SetItemDefaultFocus();
-						ImGui::PopID();
+						ImGui::EndCombo();
 					}
-					ImGui::EndCombo();
+				}
+
+				static float temp_glove_wear = g_cfg->glove_changer.m_wear;
+				float glove_item_width = ImGui::CalcItemWidth();
+				float glove_half_width = (glove_item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+				ImGui::SetNextItemWidth(glove_half_width);
+				if (ImGui::SliderFloat("##GloveWear", &temp_glove_wear, 0.0f, 1.0f, "%.4f")) {
+					if (!ImGui::IsMouseDown(0))
+						g_cfg->glove_changer.m_wear = temp_glove_wear;
+				}
+				if (!ImGui::IsItemActive() && temp_glove_wear != g_cfg->glove_changer.m_wear)
+					g_cfg->glove_changer.m_wear = temp_glove_wear;
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(glove_half_width);
+				ImGui::InputInt("Wear / Seed##glove", &g_cfg->glove_changer.m_seed, 0, 0);
+				if (ImGui::Button("Apply Gloves##gloves_apply")) {
+					g_glove_changer->should_update = true;
 				}
 			}
 		}
-		if (g_item_schema->is_initialized()) {
-			static float temp_glove_wear = g_cfg->glove_changer.m_wear;
-			float glove_item_width = ImGui::CalcItemWidth();
-			float glove_half_width = (glove_item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
-			ImGui::SetNextItemWidth(glove_half_width);
-			if (ImGui::SliderFloat("##GloveWear", &temp_glove_wear, 0.0f, 1.0f, "%.4f")) {
-				if (!ImGui::IsMouseDown(0))
-					g_cfg->glove_changer.m_wear = temp_glove_wear;
-			}
-			if (!ImGui::IsItemActive() && temp_glove_wear != g_cfg->glove_changer.m_wear)
-				g_cfg->glove_changer.m_wear = temp_glove_wear;
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(glove_half_width);
-			ImGui::InputInt("Wear / Seed##glove", &g_cfg->glove_changer.m_seed, 0, 0);
+		else {
+			ImGui::TextDisabled("Loading gloves...");
 		}
 	}
 
@@ -317,75 +338,85 @@ static void draw_skins_tab() {
 	ImGui::Checkbox("Enabled##skin", &g_cfg->skin_changer.m_enabled);
 
 	if (g_cfg->skin_changer.m_enabled) {
-		if (g_item_schema->is_initialized() && !g_item_schema->weapon_names_cstr.empty()) {
+		static ImGuiTextFilter filter;
+		uint16_t selected_weapon_def = 0;
+		const bool is_parsed = g_item_schema->is_initialized() && !g_item_schema->weapon_names_cstr.empty();
+
+		if (is_parsed) {
 			ImGui::Combo("Weapon", &g_cfg->skin_changer.m_selected_weapon,
 				g_item_schema->weapon_names_cstr.data(),
 				(int)g_item_schema->weapon_names_cstr.size());
+
+			if (g_cfg->skin_changer.m_selected_weapon < (int)g_item_schema->weapons.size()) {
+				selected_weapon_def = g_item_schema->weapons[g_cfg->skin_changer.m_selected_weapon].definition_index;
+			}
+
+			if (selected_weapon_def) {
+				int config_index = c_config::skin_changer_t::get_config_index(selected_weapon_def);
+				auto& weapon_skin = g_cfg->skin_changer.weapon_skins[config_index];
+
+				auto& kits = g_item_schema->item_paint_kits[selected_weapon_def];
+				if (!kits.empty()) {
+					const char* preview_value = (weapon_skin.paint_kit < (int)kits.size()) ? kits[weapon_skin.paint_kit].name.c_str() : "";
+
+					filter.Draw("##FilterSkins"); ImGui::SameLine(); ImGui::Text(("Search"));
+
+					if (ImGui::BeginCombo("Skin##weapon_skin", preview_value)) {
+						for (int i = 0; i < (int)kits.size(); i++) {
+							const bool is_selected = (weapon_skin.paint_kit == i);
+
+							if (filter.PassFilter(kits[i].name.c_str())) {
+								ImGui::PushID(i);
+								if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
+									weapon_skin.paint_kit = i;
+								}
+
+								ImU32 kit_color = GetRarityColor(kits[i].rarity);
+								ImVec2 p_min = ImGui::GetItemRectMin();
+								ImVec2 p_max = ImGui::GetItemRectMax();
+								ImGui::GetWindowDrawList()->AddRectFilled(
+									ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
+									ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
+									kit_color
+								);
+
+								if (is_selected) ImGui::SetItemDefaultFocus();
+								ImGui::PopID();
+							}
+						}
+						ImGui::EndCombo();
+					}
+				}
+
+				if (weapon_skin.paint_kit) {
+					float weapon_item_width = ImGui::CalcItemWidth();
+					float weapon_half_width = (weapon_item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+					ImGui::SetNextItemWidth(weapon_half_width);
+					ImGui::SliderFloat("##WeaponWear", &weapon_skin.wear, 0.0f, 1.0f, "%.4f");
+					ImGui::SameLine();
+					ImGui::SetNextItemWidth(weapon_half_width);
+					ImGui::InputInt("Wear / Seed##weapon", &weapon_skin.seed, 0, 0);
+					ImGui::InputText("Name##weapon_name", weapon_skin.custom_name,
+						sizeof(weapon_skin.custom_name));
+
+					if (ImGui::Button("Apply Skins##skin_apply")) {
+						g_skin_changer->should_update = true;
+					}
+				}
+			}
 		}
 		else {
 			ImGui::TextDisabled("Loading weapons...");
 		}
-		
-		uint16_t selected_weapon_def = 0;
-		if (g_item_schema->is_initialized() && g_cfg->skin_changer.m_selected_weapon < (int)g_item_schema->weapons.size()) {
-			selected_weapon_def = g_item_schema->weapons[g_cfg->skin_changer.m_selected_weapon].definition_index;
-		}
-
-		if (g_item_schema->is_initialized() && selected_weapon_def > 0) {
-			int config_index = c_config::skin_changer_t::get_config_index(selected_weapon_def);
-			auto& weapon_skin = g_cfg->skin_changer.weapon_skins[config_index];
-
-			auto& kits = g_item_schema->item_paint_kits[selected_weapon_def];
-			if (!kits.empty()) {
-				const char* preview_value = (weapon_skin.paint_kit < (int)kits.size()) ? kits[weapon_skin.paint_kit].name.c_str() : "";
-
-				if (ImGui::BeginCombo("Skin##weapon_skin", preview_value)) {
-					for (int i = 0; i < (int)kits.size(); i++) {
-						const bool is_selected = (weapon_skin.paint_kit == i);
-						ImGui::PushID(i);
-						if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
-							weapon_skin.paint_kit = i;
-						}
-
-						ImU32 kit_color = GetRarityColor(kits[i].rarity);
-						ImVec2 p_min = ImGui::GetItemRectMin();
-						ImVec2 p_max = ImGui::GetItemRectMax();
-						ImGui::GetWindowDrawList()->AddRectFilled(
-							ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
-							ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
-							kit_color
-						);
-
-						if (is_selected) ImGui::SetItemDefaultFocus();
-						ImGui::PopID();
-					}
-					ImGui::EndCombo();
-				}
-			}
-			
-			float weapon_item_width = ImGui::CalcItemWidth();
-			float weapon_half_width = (weapon_item_width - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
-			ImGui::SetNextItemWidth(weapon_half_width);
-			ImGui::SliderFloat("##WeaponWear", &weapon_skin.wear, 0.0f, 1.0f, "%.4f");
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(weapon_half_width);
-			ImGui::InputInt("Wear / Seed##weapon", &weapon_skin.seed, 0, 0);
-			ImGui::InputText("Name##weapon_name", weapon_skin.custom_name,
-				sizeof(weapon_skin.custom_name));
-
-			if (ImGui::Button("Apply Skins##skin_apply")) {
-				g_skin_changer->should_update = true;
-			}
-		}
 	}
-	
+
 	ImGui::Spacing();
 	ImGui::Text("Player Model Changer");
 	ImGui::Separator();
 
 	ImGui::Text("Player Model Path");
 	ImGui::InputText("##CustomModel", &g_cfg->sPathToModel);
-	if (ImGui::Button("Should Update"))
+	if (ImGui::Button("Apply Model"))
 	{
 		g_cfg->bShouldUpdate = true;
 	}
@@ -483,7 +514,7 @@ void c_menu::draw() {
 
 	ImGui::BeginChild("tabs", ImVec2(100.0f * scale, 0), true);
 	{
-		static constexpr const char* tabs[]{ "Skins", "Config","Settings"};
+		static constexpr const char* tabs[]{ "Skins", "Config","Settings" };
 
 		for (std::size_t i = 0; i < IM_ARRAYSIZE(tabs); ++i) {
 			if (ImGui::Selectable(tabs[i], m_selected_tab == static_cast<int>(i)))

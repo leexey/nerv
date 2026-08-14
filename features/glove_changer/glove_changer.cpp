@@ -44,8 +44,6 @@ void c_glove_changer::run(int stage) {
 
 	int paint_kit_id = g_item_schema->get_paint_kit_id_for_item(selected_glove, g_cfg->glove_changer.m_paint_kit);
 
-	auto* paint_kit = glove_item->construct_paint_kit();
-
 	const float current_spawn_time = observer_target->m_last_spawn_time_index();
 	const int   current_team = observer_target->m_team_num();
 
@@ -60,30 +58,15 @@ void c_glove_changer::run(int stage) {
 		|| !glove_item->m_initialized()
 		|| observer_target->m_need_to_reapply_gloves();
 
-	//if (team_changed)
-	//	m_clear_frames = 2;
-	if (config_changed || pawn_state_changed || engine_reset || should_update)
+	if (config_changed || should_update)
 		m_update_frames = 4;
-
-	if (m_clear_frames > 0) {
-		econ_item_attribute_manager::remove(glove_item);
-
-		glove_item->m_definition_index() = 0;
-		glove_item->m_initialized() = false;
-		observer_target->m_need_to_reapply_gloves() = true;
-		m_clear_frames--;
-
-		m_last_glove = 0;
-		m_last_paint_kit_id = 0;
-		m_last_team = current_team;
-		should_update = false;
-		return;
-	}
 
 	if (m_update_frames <= 0) {
 		should_update = false;
 		return;
 	}
+
+	auto* paint_kit = glove_item->construct_paint_kit(); // bugs if u apply a wrong skin to a wrong type of glove
 
 	glove_item->m_definition_index() = selected_glove;
 	glove_item->m_entity_quality() = QUALITY_UNUSUAL;
@@ -96,21 +79,12 @@ void c_glove_changer::run(int stage) {
 
 	econ_item_attribute_manager::remove(glove_item);
 	if (paint_kit_id > 0)
-		econ_item_attribute_manager::create(glove_item, paint_kit_id,
-			g_cfg->glove_changer.m_wear, g_cfg->glove_changer.m_seed);
-	auto* controller = observer_target->get_controller();
-	uint32_t local_account_id = controller ? (uint32_t)controller->m_steam_id() : 0;
-	uint32_t origIDHigh = glove_item->m_item_id_high();
-	uint32_t real_item_id_low = glove_item->m_item_id_low();
-	uint64_t real_id_full = glove_item->m_item_id();
+		econ_item_attribute_manager::create(glove_item, paint_kit_id, g_cfg->glove_changer.m_wear, g_cfg->glove_changer.m_seed);
 
 	glove_item->m_item_id_high() = 0xFFFFFFFF;
-	glove_item->m_item_id_low() = real_item_id_low;
-	glove_item->m_item_id() = real_id_full; //m_iItemID
-	glove_item->m_account_id() = local_account_id; //m_iAccountID
+	glove_item->m_initialized() = true; //m_bInitialized
 	glove_item->m_bDisallowSOCm() = false;
 	glove_item->m_bRestoreCustomMaterialAfterPrecache() = true;
-	glove_item->m_initialized() = true; //m_bInitialized
 
 	observer_target->set_body_group();
 	observer_target->m_need_to_reapply_gloves() = true;
