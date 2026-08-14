@@ -84,6 +84,7 @@
   <ItemGroup>
     <ClInclude Include="config.hpp" />
     <ClInclude Include="directx\directx.hpp" />
+    <ClInclude Include="features\agent_changer\agent_changer.hpp" />
     <ClInclude Include="features\shared\econ_item_attribute_manager.hpp" />
     <ClInclude Include="features\shared\item_schema.hpp" />
     <ClInclude Include="features\glove_changer\glove_changer.hpp" />
@@ -142,6 +143,7 @@
   <ItemGroup>
     <ClCompile Include="directx\directx.cpp" />
     <ClCompile Include="entry.cpp" />
+    <ClCompile Include="features\agent_changer\agent_changer.cpp" />
     <ClCompile Include="features\glove_changer\glove_changer.cpp" />
     <ClCompile Include="features\shared\econ_item_attribute_manager.cpp" />
     <ClCompile Include="features\shared\item_schema.cpp" />
@@ -166,7 +168,6 @@
     <ClCompile Include="valve\interfaces\vtables\cs_usercmd.pb.cc" />
     <ClCompile Include="valve\interfaces\vtables\c_buffer_string_growable.cpp" />
     <ClCompile Include="valve\interfaces\vtables\i_localize.cpp" />
-    <ClCompile Include="valve\interfaces\vtables\mem_alloc.cpp" />
     <ClCompile Include="valve\interfaces\vtables\netmessages.pb.cc" />
     <ClCompile Include="valve\interfaces\vtables\network_connection.pb.cc" />
     <ClCompile Include="valve\interfaces\vtables\networkbasetypes.pb.cc" />

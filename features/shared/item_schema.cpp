@@ -98,6 +98,7 @@ void c_item_schema::initialize() {
 	auto& paint_kit_map = item_schema->get_paint_kits();
 
 	const int items_n = items.count();
+
 	for (int i = 0; i < items_n; i++) {
 		auto& node = items.element(i);
 		if (!node.m_value || !node.m_value->m_item_type_name)
@@ -129,6 +130,10 @@ void c_item_schema::initialize() {
 		else if (item_def->is_glove(true)) {
 			gloves.push_back({ item_def->m_definition_index, item_name, model_path });
 		}
+		else if (item_def->is_agent())
+		{
+			agents.push_back({ item_def->m_definition_index, item_name, model_path });
+		}
 		else {
 			const char* type_name = item_def->m_item_type_name;
 			bool is_weapon = strstr(type_name, "Pistol") || strstr(type_name, "Rifle") ||
@@ -144,6 +149,16 @@ void c_item_schema::initialize() {
 	std::sort(weapons.begin(), weapons.end(), [](const item_info_t& a, const item_info_t& b) {
 		return a.definition_index < b.definition_index;
 	});
+
+	//sort by model path
+	std::sort(agents.begin(), agents.end(), [](const item_info_t& a, const item_info_t& b) {
+		return std::strcmp(a.model_path, b.model_path) < 0;
+	});
+
+	//erase duplicate elements with same model paths
+	agents.erase(std::unique(agents.begin(), agents.end(), [](const item_info_t& a, const item_info_t& b) {
+		return std::strcmp(a.model_path, b.model_path) == 0;
+	}), agents.end());
 
 	for (auto& knife : knives)
 		if (knife.definition_index != 0)
@@ -163,14 +178,16 @@ void c_item_schema::initialize() {
 		glove_names_cstr.push_back(glove.name.c_str());
 	for (auto& weapon : weapons)
 		weapon_names_cstr.push_back(weapon.name.c_str());
+	for (auto& agent : agents)
+		agent_names_cstr.push_back(agent.name.c_str());
 
 	for (auto& [def_index, kits] : item_paint_kits)
 		for (auto& kit : kits)
 			item_paint_kit_names[def_index].push_back(kit.name.c_str());
 
 	m_initialized = true;
-	LOG_INFO(xorstr_("[item_schema] %d knives, %d gloves, %d weapons"),
-		(int)knives.size() - 1, (int)gloves.size() - 1, (int)weapons.size());
+	LOG_INFO(xorstr_("[item_schema] %d knives, %d gloves, %d weapons, %d agents"),
+		(int)knives.size() - 1, (int)gloves.size() - 1, (int)weapons.size(), (int)agents.size() - 2);
 }
 
 std::uintptr_t c_hud::find_hud_element(const char* name) {

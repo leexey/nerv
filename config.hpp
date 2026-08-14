@@ -26,6 +26,11 @@ public:
 		int m_seed = 0;
 	} glove_changer;
 
+	struct agent_changer_t {
+		bool m_enabled = false;
+		int m_agent = 0;
+	} agent_changer;
+
 	struct skin_changer_t {
 		bool m_enabled = false;
 		int m_selected_weapon = 0;

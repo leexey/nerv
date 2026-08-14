@@ -114,40 +114,6 @@ void c_skin_changer::initialize() {
 	m_initialized = g_item_schema->is_initialized();
 }
 
-void c_skin_changer::custom_model()
-{
-	if(!g_cfg->bShouldUpdate)
-		return;
-
-	auto* local_pawn = reinterpret_cast<c_cs_player_pawn*>(g_ctx->m_local_pawn);
-	if (!valid_ptr(local_pawn) || local_pawn->m_health() <= 0)
-	{
-		g_cfg->bShouldUpdate = false;
-		return;
-	}
-
-	auto observer_service = local_pawn->m_observer_services();
-	if (!observer_service || observer_service->m_observer_mode() == 0)
-	{
-		g_cfg->bShouldUpdate = false;
-		return;
-	}
-
-	auto observer_target = g_interfaces->m_game_resource->pGameEntitySystem->Get<c_cs_player_pawn>(observer_service->m_observer_target());
-	if (!valid_ptr(observer_target) || observer_target->m_health() <= 0)
-	{
-		g_cfg->bShouldUpdate = false;
-		return;
-	}
-
-	const char* szPathModel = g_cfg->sPathToModel.c_str();
-	g_interfaces->m_resource_system->BlockingLoadResourceByName(szPathModel, 0);
-
-	observer_target->set_model(szPathModel);
-
-	g_cfg->bShouldUpdate = false;
-}
-
 void c_skin_changer::process_weapon(c_econ_entity* weapon, c_econ_item_view* item, c_cs_player_pawn* local_pawn, bool force_update, bool& did_update, uint64_t local_steam_id) {
 
 	if (weapon->get_original_owner_xuid() != local_steam_id)
@@ -210,7 +176,7 @@ void c_skin_changer::process_knife(c_econ_entity* weapon, c_econ_item_view* item
 	did_update = true;
 }
 
-void c_skin_changer::run(int stage) {
+void c_skin_changer::run() {
 
 	const bool skin_enabled = g_cfg->skin_changer.m_enabled;
 	const bool knife_enabled = g_cfg->knife_changer.m_enabled;
@@ -219,9 +185,6 @@ void c_skin_changer::run(int stage) {
 
 	if (!game_client)
 		return;
-
-	//player model changer
-	this->custom_model();
 
 	if ((!skin_enabled && !knife_enabled) || !g_ctx->m_local_pawn || !g_interfaces->m_network_client)
 		return;
@@ -247,14 +210,11 @@ void c_skin_changer::run(int stage) {
 	const int   current_team = observer_target->m_team_num();
 	uint64_t    local_steam_id = controller->m_steam_id();
 
-
 	const bool team_changed = (current_team != m_last_team) && m_last_team != 0;
-	const bool spawn_changed = (current_spawn_time != m_last_spawn_time) && m_last_spawn_time != 0.0f;
-
+	const bool spawn_changed = (current_spawn_time != m_last_spawn_time);
 
 	static auto last_cfg_skin = g_cfg->skin_changer;
 	static auto last_cfg_knife = g_cfg->knife_changer;
-
 
 	bool config_changed = memcmp(&last_cfg_skin, &g_cfg->skin_changer, sizeof(last_cfg_skin)) != 0 ||
 		memcmp(&last_cfg_knife, &g_cfg->knife_changer, sizeof(last_cfg_knife)) != 0;
@@ -285,6 +245,9 @@ void c_skin_changer::run(int stage) {
 		last_cfg_skin = g_cfg->skin_changer;
 		last_cfg_knife = g_cfg->knife_changer;
 	}
+
+	saved_tickcount = game_client->GetTickBase();
+
 	auto sync_pawn_state = [&]() {
 		m_last_spawn_time = current_spawn_time;
 		m_last_team = current_team;

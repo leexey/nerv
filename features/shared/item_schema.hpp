@@ -27,6 +27,7 @@ public:
 	std::vector<item_info_t> knives;
 	std::vector<item_info_t> gloves;
 	std::vector<item_info_t> weapons;
+	std::vector<item_info_t> agents;
 
 	std::vector<paint_kit_info_t> all_paint_kits;
 
@@ -36,6 +37,7 @@ public:
 	std::vector<const char*> knife_names_cstr;
 	std::vector<const char*> glove_names_cstr;
 	std::vector<const char*> weapon_names_cstr;
+	std::vector<const char*> agent_names_cstr;
 
 	void initialize();
 	bool is_initialized() const { return m_initialized; }

@@ -6,7 +6,7 @@
 
 class c_glove_changer {
 public:
-	void run(int stage);
+	void run();
 	bool should_update = false;
 
 private:

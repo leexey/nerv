@@ -41,7 +41,7 @@ namespace econ_item_attribute_manager {
 			return;
 
 		constexpr size_t attr_count = 3;
-		auto* attrs = static_cast<econ_item_attribute_t*>(GameAlloc(attr_count * sizeof(econ_item_attribute_t)));
+		auto* attrs = static_cast<econ_item_attribute_t*>(g_interfaces->m_mem_alloc->alloc(attr_count * sizeof(econ_item_attribute_t)));
 		if (!attrs)
 			return;
 
@@ -79,6 +79,6 @@ namespace econ_item_attribute_manager {
 		vec->size = 0;
 		vec->ptr  = 0;
 
-		GameFree(ptr);
+		g_interfaces->m_mem_alloc->free(ptr);
 	}
 }

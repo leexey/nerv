@@ -36,6 +36,7 @@ public:
 class c_modules {
 private:
 	struct modules_t {
+		c_dll tier0_dll{};
 		c_dll client_dll{};
 		c_dll input_system{};
 		c_dll schemasystem_dll{};

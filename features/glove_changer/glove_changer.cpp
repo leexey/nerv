@@ -2,11 +2,7 @@
 #include "../shared/econ_item_attribute_manager.hpp"
 #include "../../valve/interfaces/interfaces.hpp"
 
-#include "glove_changer.hpp"
-#include "../shared/econ_item_attribute_manager.hpp"
-#include "../../valve/interfaces/interfaces.hpp"
-
-void c_glove_changer::run(int stage) {
+void c_glove_changer::run() {
 	if (!g_cfg->glove_changer.m_enabled || !g_ctx->m_local_pawn)
 		return;
 
@@ -15,7 +11,7 @@ void c_glove_changer::run(int stage) {
 		return;
 
 	auto observer_service = local_pawn->m_observer_services();
-	if (!observer_service || observer_service->m_observer_mode() == 0) // OBSERVER_MODE_NONE = 0x0
+	if (!observer_service || observer_service->m_observer_mode() == 0)
 		return;
 
 	auto observer_target = g_interfaces->m_game_resource->pGameEntitySystem->Get<c_cs_player_pawn>(observer_service->m_observer_target());
@@ -37,8 +33,7 @@ void c_glove_changer::run(int stage) {
 		|| g_cfg->glove_changer.m_glove >= (int)g_item_schema->gloves.size())
 		return;
 
-	const uint16_t selected_glove =
-		g_item_schema->gloves[g_cfg->glove_changer.m_glove].definition_index;
+	const uint16_t selected_glove = g_item_schema->gloves[g_cfg->glove_changer.m_glove].definition_index;
 	if (selected_glove == 0)
 		return;
 
@@ -58,8 +53,25 @@ void c_glove_changer::run(int stage) {
 		|| !glove_item->m_initialized()
 		|| observer_target->m_need_to_reapply_gloves();
 
-	if (config_changed || should_update)
+	if(pawn_state_changed)
+		m_clear_frames = 2;
+	if (config_changed || pawn_state_changed || engine_reset || should_update)
 		m_update_frames = 4;
+
+	if (m_clear_frames > 0)
+	{
+		econ_item_attribute_manager::remove(glove_item);
+		glove_item->m_definition_index() = 0;
+		glove_item->m_initialized() = false;
+		local_pawn->m_need_to_reapply_gloves() = true;
+		m_clear_frames--;
+
+		m_last_glove = 0;
+		m_last_paint_kit_id = 0;
+		m_last_spawn_time = current_spawn_time;
+		should_update = false;
+		return;
+	}
 
 	if (m_update_frames <= 0) {
 		should_update = false;
@@ -81,10 +93,10 @@ void c_glove_changer::run(int stage) {
 	if (paint_kit_id > 0)
 		econ_item_attribute_manager::create(glove_item, paint_kit_id, g_cfg->glove_changer.m_wear, g_cfg->glove_changer.m_seed);
 
-	glove_item->m_item_id_high() = 0xFFFFFFFF;
+	//glove_item->m_item_id_high() = 0xFFFFFFFF;
 	glove_item->m_initialized() = true; //m_bInitialized
-	glove_item->m_bDisallowSOCm() = false;
-	glove_item->m_bRestoreCustomMaterialAfterPrecache() = true;
+	//glove_item->m_bDisallowSOCm() = false;
+	//glove_item->m_bRestoreCustomMaterialAfterPrecache() = true;
 
 	observer_target->set_body_group();
 	observer_target->m_need_to_reapply_gloves() = true;

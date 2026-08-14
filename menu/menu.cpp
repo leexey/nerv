@@ -3,6 +3,7 @@
 #include "../features/shared/item_schema.hpp"
 #include "../features/skin_changer/skin_changer.hpp"
 #include "../features/glove_changer/glove_changer.hpp"
+#include "../features/agent_changer/agent_changer.hpp"
 #include "../sdk/config_system/config_system.hpp"
 #include "../valve/classes/c_cs_player_pawn.hpp"
 #include "../valve/interfaces/interfaces.hpp"
@@ -329,6 +330,34 @@ static void draw_skins_tab() {
 		}
 		else {
 			ImGui::TextDisabled("Loading gloves...");
+		}
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Agent Changer");
+	ImGui::Separator();
+	ImGui::Checkbox("Enabled##agent", &g_cfg->agent_changer.m_enabled);
+
+	if (g_cfg->agent_changer.m_enabled)
+	{
+		if (g_item_schema->is_initialized() && !g_item_schema->agent_names_cstr.empty())
+		{
+			static int agent_selected = 0;
+
+			ImGui::Combo("Agent Model", &g_cfg->agent_changer.m_agent,
+				g_item_schema->agent_names_cstr.data(),
+				(int)g_item_schema->agent_names_cstr.size());
+
+			if (agent_selected != g_cfg->agent_changer.m_agent)
+			{
+				g_agent_changer->should_update = true;
+			}
+
+			agent_selected = g_cfg->agent_changer.m_agent;
+		}
+		else
+		{
+			ImGui::TextDisabled("Loading agents...");
 		}
 	}
 

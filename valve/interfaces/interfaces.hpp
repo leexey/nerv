@@ -9,6 +9,7 @@
 #include "vtables/i_network_game_client.hpp"
 #include "vtables/i_resource_system.hpp"
 #include "vtables/iswapchaindx11.h"
+#include "vtables/i_mem_alloc.hpp"
 
 template <typename type_t = void*>
 inline type_t* get_interface(c_dll* dll, const char* name)
@@ -28,6 +29,7 @@ inline type_t* get_interface(c_dll* dll, const char* name)
 class c_interfaces
 {
 public:
+	i_mem_alloc* m_mem_alloc;
 	i_csgo_input* m_csgo_input;
 	i_entity_system* m_entity_system;
 	i_schema_system* m_schema_system;

@@ -9,6 +9,7 @@
 	}
 
 void c_modules::modules_t::initialize() {
+	REQUIRE(tier0_dll,			"tier0.dll");
 	REQUIRE(client_dll,			"client.dll");
 	REQUIRE(input_system,		"inputsystem.dll");
 	REQUIRE(schemasystem_dll,	"schemasystem.dll");

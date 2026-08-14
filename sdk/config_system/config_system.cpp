@@ -44,6 +44,9 @@ void c_config_system::setup_values() {
     push_item(&g_cfg->glove_changer.m_wear, "glove_changer", "wear", 0.0001f);
     push_item(&g_cfg->glove_changer.m_seed, "glove_changer", "seed", 0);
 
+    push_item(&g_cfg->agent_changer.m_enabled, "agent_changer", "enabled", false);
+    push_item(&g_cfg->agent_changer.m_agent, "agent_changer", "agent", 0);
+
     push_item(&g_cfg->skin_changer.m_enabled, "skin_changer", "enabled", false);
     push_item(&g_cfg->skin_changer.m_selected_weapon, "skin_changer", "selected_weapon", 0);
 

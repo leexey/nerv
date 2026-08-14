@@ -7,13 +7,11 @@
 
 class c_skin_changer {
 public:
-	void run(int stage);
+	void run();
 	void initialize();
 
 	bool should_update = false;
 	bool is_initialized() const { return m_initialized; }
-
-	void custom_model();
 
 private:
 	bool m_initialized = false;
@@ -24,6 +22,7 @@ private:
 
 	int m_update_frames = 0;
 	int m_clear_frames = 0;
+	int saved_tickcount = 0;
 
 
 	bool m_last_skin_enabled = false;

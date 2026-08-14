@@ -69,7 +69,6 @@ uintptr_t __stdcall start_address(const HMODULE h_module)
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD ul_reason_for_call, LPVOID lp_reserved) {
     if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
-        InitMemAlloc();
         DisableThreadLibraryCalls(h_module);
 
         HANDLE thread = CreateThread(nullptr, 0,

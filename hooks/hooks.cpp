@@ -4,6 +4,7 @@
 #include "../features/shared/item_schema.hpp"
 #include "../features/skin_changer/skin_changer.hpp"
 #include "../features/glove_changer/glove_changer.hpp"
+#include "../features//agent_changer/agent_changer.hpp"
 #include "../valve/interfaces/vtables/i_csgo_input.hpp"
 #include "../valve/interfaces/vtables/i_game_event.hpp"
 #include "../valve/classes/c_cs_player_pawn.hpp"
@@ -176,8 +177,9 @@ void hooks::frame_stage_notify::hk_frame_stage_notify(void* source_to_client, in
 		g_ctx->m_local_pawn = g_interfaces->m_entity_system->get_local_pawn();
 
 		if (g_ctx->m_local_pawn != nullptr && g_ctx->m_local_controller != nullptr) {
-			g_skin_changer->run(stage);
-			g_glove_changer->run(stage);
+			g_skin_changer->run();
+			g_glove_changer->run();
+			g_agent_changer->run();
 		}
 	}
 

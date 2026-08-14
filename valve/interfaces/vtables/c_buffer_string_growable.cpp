@@ -2,6 +2,7 @@
 #include <utils/utils.hpp>
 #include <valve/modules/modules.hpp>
 #include "i_mem_alloc.hpp"
+#include "../interfaces.hpp"
 
 template <std::size_t MAX_SIZE, bool allow_heap_allocation, typename T>
 T* c_buffer_string::to_growable()
@@ -56,7 +57,7 @@ template <std::size_t MAX_SIZE, bool allow_heap_allocation>
 c_buffer_string_growable<MAX_SIZE, allow_heap_allocation>::~c_buffer_string_growable()
 {
 	if (is_heap_allocated() && memory_.heap_string)
-		GameFree((void*)memory_.heap_string);
+		g_interfaces->m_mem_alloc->free((void*)memory_.heap_string);
 }
 
 template <std::size_t MAX_SIZE, bool allow_heap_allocation>
