@@ -3,15 +3,44 @@
 #include "../../valve/interfaces/vtables/i_localize.hpp"
 #include "../../valve/classes/c_cs_player_pawn.hpp"
 
+std::string c_item_schema::get_skin_image_path(const std::string& simple_name, const char* paint_kit_name, bool check) {
+	static std::string path; // buffer
+
+	if (simple_name.empty())
+		return "";
+
+	// Check if this is an agent (customplayer_*)
+	if (simple_name.find("customplayer_") == 0) {
+		// Agent image path
+		check ? path = "panorama/images/econ/characters/" : path = "s2r://panorama/images/econ/characters/";
+		path += simple_name;
+		path += "_png.vtex";
+		if (check)
+			path += "_c";
+		return path;
+	}
+
+	// For weapons, skins, gloves, etc. - need skinToken
+	if (!paint_kit_name || paint_kit_name[0] == '\0')
+		return "";
+
+	// Build image path similar to inventory.cpp
+	check ? path = "panorama/images/econ/default_generated/" : path = "s2r://panorama/images/econ/default_generated/";
+	path += simple_name;
+	path += "_";
+	path += paint_kit_name;
+	path += "_light_png.vtex";
+	if (check)
+		path += "_c";
+
+	return path;
+}
+
 bool c_item_schema::is_paint_kit_for_item(const char* simple_weapon_name, c_paint_kit* paint_kit) {
 	if (!simple_weapon_name || !paint_kit || !paint_kit->m_name)
 		return false;
 
-	std::string path = "panorama/images/econ/default_generated/" +
-		std::string(simple_weapon_name) + "_" +
-		paint_kit->m_name + "_light_png.vtex_c";
-
-	return g_interfaces->m_file_system->exists(path.c_str(), "GAME");
+	return g_interfaces->m_file_system->exists(get_skin_image_path(simple_weapon_name, paint_kit->m_name, true).c_str(), "GAME");
 }
 
 void c_item_schema::build_paint_kits_for_item(uint16_t def_index, c_utl_map<int, c_econ_item_definition*>& items, c_utl_map<int, c_paint_kit*>& paint_kit_map) {
@@ -33,7 +62,12 @@ void c_item_schema::build_paint_kits_for_item(uint16_t def_index, c_utl_map<int,
 		return;
 
 	const int kits_n = paint_kit_map.count();
+
 	for (int i = 0; i < kits_n; i++) {
+		m_init_progress.m_skins_count = kits_n;
+		m_init_progress.m_skins_left = i;
+		m_init_progress.m_weapon_name = simple_name;
+
 		auto& node = paint_kit_map.element(i);
 		if (!node.m_value)
 			continue;
@@ -61,12 +95,26 @@ void c_item_schema::build_paint_kits_for_item(uint16_t def_index, c_utl_map<int,
 				if (final_rarity > 6) final_rarity = 6;
 			}
 
+			CUIEngineSource2* ui_engine = g_interfaces->m_panorama->AccessUIEngine();
+			CImageResourceManager* resource_manager = ui_engine ? ui_engine->GetResourceManager() : nullptr;
+
+			const std::string skin_image_path = get_skin_image_path(simple_name, kit->m_name);
+			CImageProxySource* image = nullptr;
+			
+			if (resource_manager && !skin_image_path.empty()) {
+				image = resource_manager->LoadImageInternal(skin_image_path.c_str(), EImageFormat::RGBA8888);
+			}
+
+			if (image == nullptr)
+				LOG_ERROR(u8"Image for '%s | %s' is nullptr", simple_name, kit->m_name);
+
 			item_paint_kits[def_index].push_back({
-		kit->m_id,
-		std::string(display),
-		std::string(kit->m_name),
-		final_rarity
-				});
+				kit->m_id,
+				std::string(display),
+				std::string(kit->m_name),
+				final_rarity,
+				image
+			});
 		}
 	}
 
@@ -76,7 +124,7 @@ void c_item_schema::build_paint_kits_for_item(uint16_t def_index, c_utl_map<int,
 			if (a.rarity != b.rarity)
 				return a.rarity > b.rarity;
 			return a.name < b.name;
-			});
+		});
 	}
 
 	if (!item_def->is_glove(false))
@@ -99,7 +147,12 @@ void c_item_schema::initialize() {
 
 	const int items_n = items.count();
 
+	LOG_INFO("Initializing item types...");
+
 	for (int i = 0; i < items_n; i++) {
+		m_init_progress.m_types_left = i;
+		m_init_progress.m_types_count = items_n;
+
 		auto& node = items.element(i);
 		if (!node.m_value || !node.m_value->m_item_type_name)
 			continue;
@@ -159,6 +212,8 @@ void c_item_schema::initialize() {
 	agents.erase(std::unique(agents.begin(), agents.end(), [](const item_info_t& a, const item_info_t& b) {
 		return std::strcmp(a.model_path, b.model_path) == 0;
 	}), agents.end());
+
+	LOG_INFO("Initializing skins...");
 
 	for (auto& knife : knives)
 		if (knife.definition_index != 0)

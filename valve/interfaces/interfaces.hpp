@@ -10,6 +10,7 @@
 #include "vtables/i_resource_system.hpp"
 #include "vtables/iswapchaindx11.h"
 #include "vtables/i_mem_alloc.hpp"
+#include "vtables/i_panorama.h"
 
 template <typename type_t = void*>
 inline type_t* get_interface(c_dll* dll, const char* name)
@@ -39,6 +40,7 @@ public:
 	i_game_resource_service* m_game_resource;
 	i_network_client_service* m_network_client;
 	i_resource_system* m_resource_system;
+	i_panorama* m_panorama;
 	ISwapChainDx11* m_swap_chain;
 
 	void initialize();

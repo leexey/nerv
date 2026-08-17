@@ -37,6 +37,9 @@ void c_interfaces::initialize()
 	m_network_client = get_interface<i_network_client_service>(&g_modules->m_modules.engine_dll, xorstr_("NetworkClientService_001"));
 	CHECK(xorstr_("Network Client"), m_network_client);
 
+	m_panorama = get_interface<i_panorama>(&g_modules->m_modules.panorama_dll, xorstr_("PanoramaUIEngine001"));
+	CHECK(xorstr_("Panorama"), m_panorama);
+
 	m_resource_system = get_interface<i_resource_system>(&g_modules->m_modules.resourcesystem_dll, xorstr_("ResourceSystem013"));
 	CHECK(xorstr_("Resource Client"), m_resource_system);
 	

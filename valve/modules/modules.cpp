@@ -15,6 +15,7 @@ void c_modules::modules_t::initialize() {
 	REQUIRE(schemasystem_dll,	"schemasystem.dll");
 	REQUIRE(filesystem_stdio,	"filesystem_stdio.dll");
 	REQUIRE(engine_dll,			"engine2.dll");
+	REQUIRE(panorama_dll,		"panorama.dll");
 	REQUIRE(resourcesystem_dll,	"resourcesystem.dll");
 	REQUIRE(rendersystem_dll,	"rendersystemdx11.dll");
 	afxhooksource2_dll = c_dll(xorstr_("afxhooksource2.dll"));

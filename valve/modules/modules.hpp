@@ -43,6 +43,7 @@ private:
 		c_dll filesystem_stdio{};
 		c_dll localize_dll{};
 		c_dll engine_dll{};
+		c_dll panorama_dll{};
 		c_dll resourcesystem_dll{};
 		c_dll rendersystem_dll{};
 		c_dll afxhooksource2_dll{};

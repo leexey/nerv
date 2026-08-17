@@ -130,6 +130,7 @@
     <ClInclude Include="valve\interfaces\vtables\i_localize.hpp" />
     <ClInclude Include="valve\interfaces\vtables\i_mem_alloc.hpp" />
     <ClInclude Include="valve\interfaces\vtables\i_network_game_client.hpp" />
+    <ClInclude Include="valve\interfaces\vtables\i_panorama.h" />
     <ClInclude Include="valve\interfaces\vtables\i_resource_system.hpp" />
     <ClInclude Include="valve\interfaces\vtables\i_schema_system.hpp" />
     <ClInclude Include="valve\interfaces\vtables\netmessages.pb.h" />

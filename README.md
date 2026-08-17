@@ -9,6 +9,7 @@ Original Source : [click](https://www.unknowncheats.me/forum/counter-strike-2-re
 
 # KNOWN ISSUES :
 + **THIRDPERSON KNIFE ANIMATIONS WORK ONLY WITH TRUEVIEW ON**
++ **skins update only manually after rewinding the demo**
 + **gloves skins can bug forever (issue with: glove_changer.cpp -> glove_item->construct_paint_kit())**
 
 **s/o**  

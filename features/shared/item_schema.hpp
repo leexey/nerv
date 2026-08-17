@@ -20,6 +20,16 @@ struct paint_kit_info_t {
 	std::string name;
 	std::string skinToken;
 	int rarity;
+	CImageProxySource* image;
+};
+
+struct progress {
+	int m_types_left = 0;
+	int m_types_count = 0;
+
+	int m_skins_left = 0;
+	int m_skins_count = 0;
+	const char* m_weapon_name = "";
 };
 
 class c_item_schema {
@@ -41,6 +51,7 @@ public:
 
 	void initialize();
 	bool is_initialized() const { return m_initialized; }
+	progress get_progress() const { return m_init_progress; }
 
 	const std::vector<const char*>& get_paint_kit_names_for_item(uint16_t def_index) const {
 		static std::vector<const char*> empty = { "Default" };
@@ -57,7 +68,10 @@ public:
 
 private:
 	bool m_initialized = false;
+	progress m_init_progress;
+
 	bool is_paint_kit_for_item(const char* simple_weapon_name, c_paint_kit* paint_kit);
+	std::string get_skin_image_path(const std::string& simple_name, const char* paint_kit_name, bool check = false);
 	void build_paint_kits_for_item(uint16_t def_index, c_utl_map<int, c_econ_item_definition*>& items, c_utl_map<int, c_paint_kit*>& paint_kit_map);
 };
 

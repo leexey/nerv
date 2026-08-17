@@ -1,5 +1,11 @@
 #include "../main.hpp"
 #include "menu.hpp"
+
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <sdk/includes/imgui/imgui_internal.h>
+
 #include "../features/shared/item_schema.hpp"
 #include "../features/skin_changer/skin_changer.hpp"
 #include "../features/glove_changer/glove_changer.hpp"
@@ -8,10 +14,6 @@
 #include "../valve/classes/c_cs_player_pawn.hpp"
 #include "../valve/interfaces/interfaces.hpp"
 #include "../sdk/includes/imgui/imgui_stdlib.h"
-#include <algorithm>
-#include <vector>
-#include <string>
-
 
 ImU32 GetRarityColor(int rarity) {
 	switch (rarity) {
@@ -161,6 +163,84 @@ void c_menu::setup_style() {
 	m_style_initialized = true;
 }
 
+void get_loading_progress() {
+	const auto progress = g_item_schema->get_progress();
+
+	if (progress.m_types_count && !progress.m_skins_count) {
+		ImGui::TextDisabled("Loading types: %d from %d", progress.m_types_left, progress.m_types_count);
+	}
+	else if (progress.m_types_count && progress.m_skins_count) {
+		//ImGui::TextDisabled("Loading skins: %d from %d for %s", progress.m_skins_left, progress.m_skins_count, progress.m_weapon_name); // skins are loading too fast
+		ImGui::TextDisabled("Loading skins for %s", progress.m_weapon_name);
+	}
+	else {
+		ImGui::TextDisabled("Loading...");
+	}
+}
+
+void draw_skins_combo(const char* combo_label, ImGuiTextFilter& filter, const char* filter_label, const uint16_t& selected_def_index, int& paint_kit, bool render_preview = true) {
+	auto& kits = g_item_schema->item_paint_kits[selected_def_index];
+	if (kits.empty())
+		return;
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	filter.Draw(filter_label); ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ style.FramePadding.x, style.ItemSpacing.y }); ImGui::SameLine(); ImGui::Text(("Search")); ImGui::PopStyleVar();
+
+	const char* preview_value = (paint_kit < (int)kits.size()) ? kits[paint_kit].name.c_str() : "";
+
+	if (!ImGui::BeginCombo(combo_label, preview_value))
+		return;
+
+	for (int i = 0; i < (int)kits.size(); i++) {
+		const bool is_selected = (paint_kit == i);
+
+		if (filter.PassFilter(kits[i].name.c_str())) {
+			ImGui::PushID(i);
+
+			if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
+				paint_kit = i;
+			}
+
+			ImU32 kit_color = GetRarityColor(kits[i].rarity);
+			ImVec2 p_min = ImGui::GetItemRectMin();
+			ImVec2 p_max = ImGui::GetItemRectMax();
+			ImGui::GetWindowDrawList()->AddRectFilled(
+				ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
+				ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
+				kit_color
+			);
+			
+			if (ImGui::IsItemHovered() && kits[i].image != nullptr && render_preview) {
+				const static float spacing = style.ItemSpacing.x;
+				const static float rounding = 0.f;
+
+				const ImVec2 image_size_raw = kits[i].image->GetImageSize();
+				//const ImVec2 image_size_raw {512, 384};
+				if (image_size_raw.x != 0 && image_size_raw.y != 0) {
+
+					const float m_dpi_scale = g_menu->get_dpi_scale();
+					const ImVec2 window_position = ImGui::GetWindowPos();
+					const ImVec2 window_size = ImGui::GetWindowSize();
+					const ImVec2 image_size = ImVec2(window_size.y * image_size_raw.x / image_size_raw.y, window_size.y);
+
+					ImRect hint_bb(window_position + ImVec2(spacing + window_size.x, 0) * m_dpi_scale, window_position + ImVec2(window_size.x + image_size.x + spacing, image_size.y) * m_dpi_scale);
+
+					ImGui::PushClipRect(hint_bb.Min, hint_bb.Max, true);
+					ImGui::GetForegroundDrawList()->AddRectFilled(hint_bb.Min, hint_bb.Max, ImGui::GetColorU32(ImGuiCol_ChildBg), rounding);
+					ImGui::GetForegroundDrawList()->AddRect(hint_bb.Min, hint_bb.Max, ImGui::GetColorU32(ImGuiCol_Border), rounding);
+					ImGui::GetForegroundDrawList()->AddImage((ImTextureID)kits[i].image->GetNativeTexture(), hint_bb.Min, hint_bb.Max);
+					ImGui::PopClipRect();
+				}
+			}
+
+			if (is_selected) ImGui::SetItemDefaultFocus();
+
+			ImGui::PopID();
+		}
+	}
+	ImGui::EndCombo();
+}
+
 static void draw_skins_tab() {
 	ImGui::Text("Knife Changer");
 	ImGui::Separator();
@@ -190,41 +270,8 @@ static void draw_skins_tab() {
 			const bool are_settings_visible = selected_knife > 0 && selected_knife != WEAPON_KNIFE_T && selected_knife != WEAPON_KNIFE && g_cfg->knife_changer.m_knife;
 
 			if (are_settings_visible) {
-				auto& kits = g_item_schema->item_paint_kits[selected_knife];
-				if (!kits.empty()) {
 
-					filter.Draw("##FilterKnife"); ImGui::SameLine(); ImGui::Text(("Search"));
-
-					const char* preview_value = (g_cfg->knife_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->knife_changer.m_paint_kit].name.c_str() : "";
-
-					if (ImGui::BeginCombo("Knife Skin", preview_value)) {
-						for (int i = 0; i < (int)kits.size(); i++) {
-							const bool is_selected = (g_cfg->knife_changer.m_paint_kit == i);
-
-							if (filter.PassFilter(kits[i].name.c_str())) {
-								ImGui::PushID(i);
-
-								if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
-									g_cfg->knife_changer.m_paint_kit = i;
-								}
-
-								ImU32 kit_color = GetRarityColor(kits[i].rarity);
-								ImVec2 p_min = ImGui::GetItemRectMin();
-								ImVec2 p_max = ImGui::GetItemRectMax();
-								ImGui::GetWindowDrawList()->AddRectFilled(
-									ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
-									ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
-									kit_color
-								);
-
-								if (is_selected) ImGui::SetItemDefaultFocus();
-
-								ImGui::PopID();
-							}
-						}
-						ImGui::EndCombo();
-					}
-				}
+				draw_skins_combo("Knife Skin", filter, "##FilterKnife", selected_knife, g_cfg->knife_changer.m_paint_kit);
 
 				if (g_cfg->knife_changer.m_paint_kit) {
 					static float temp_wear = g_cfg->knife_changer.m_wear;
@@ -246,7 +293,7 @@ static void draw_skins_tab() {
 			}
 		}
 		else {
-			ImGui::TextDisabled("Loading knives...");
+			get_loading_progress();
 		}
 	}
 
@@ -277,38 +324,8 @@ static void draw_skins_tab() {
 				last_glove = g_cfg->glove_changer.m_glove;
 			}
 			if (selected_glove) {
-				auto& kits = g_item_schema->item_paint_kits[selected_glove];
-				if (!kits.empty()) {
-					const char* preview_value = (g_cfg->glove_changer.m_paint_kit < (int)kits.size()) ? kits[g_cfg->glove_changer.m_paint_kit].name.c_str() : "";
 
-					filter.Draw("##FilterGlove"); ImGui::SameLine(); ImGui::Text(("Search"));
-
-					if (ImGui::BeginCombo("Glove Skin", preview_value)) {
-						for (int i = 0; i < (int)kits.size(); i++) {
-							const bool is_selected = (g_cfg->glove_changer.m_paint_kit == i);
-
-							if (filter.PassFilter(kits[i].name.c_str())) {
-								ImGui::PushID(i);
-								if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
-									g_cfg->glove_changer.m_paint_kit = i;
-								}
-
-								ImU32 kit_color = GetRarityColor(kits[i].rarity);
-								ImVec2 p_min = ImGui::GetItemRectMin();
-								ImVec2 p_max = ImGui::GetItemRectMax();
-								ImGui::GetWindowDrawList()->AddRectFilled(
-									ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
-									ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
-									kit_color
-								);
-
-								if (is_selected) ImGui::SetItemDefaultFocus();
-								ImGui::PopID();
-							}
-						}
-						ImGui::EndCombo();
-					}
-				}
+				draw_skins_combo("Glove Skin", filter, "##FilterGlove", selected_glove, g_cfg->glove_changer.m_paint_kit);
 
 				static float temp_glove_wear = g_cfg->glove_changer.m_wear;
 				float glove_item_width = ImGui::CalcItemWidth();
@@ -329,7 +346,7 @@ static void draw_skins_tab() {
 			}
 		}
 		else {
-			ImGui::TextDisabled("Loading gloves...");
+			get_loading_progress();
 		}
 	}
 
@@ -357,7 +374,7 @@ static void draw_skins_tab() {
 		}
 		else
 		{
-			ImGui::TextDisabled("Loading agents...");
+			get_loading_progress();
 		}
 	}
 
@@ -384,38 +401,7 @@ static void draw_skins_tab() {
 				int config_index = c_config::skin_changer_t::get_config_index(selected_weapon_def);
 				auto& weapon_skin = g_cfg->skin_changer.weapon_skins[config_index];
 
-				auto& kits = g_item_schema->item_paint_kits[selected_weapon_def];
-				if (!kits.empty()) {
-					const char* preview_value = (weapon_skin.paint_kit < (int)kits.size()) ? kits[weapon_skin.paint_kit].name.c_str() : "";
-
-					filter.Draw("##FilterSkins"); ImGui::SameLine(); ImGui::Text(("Search"));
-
-					if (ImGui::BeginCombo("Skin##weapon_skin", preview_value)) {
-						for (int i = 0; i < (int)kits.size(); i++) {
-							const bool is_selected = (weapon_skin.paint_kit == i);
-
-							if (filter.PassFilter(kits[i].name.c_str())) {
-								ImGui::PushID(i);
-								if (ImGui::Selectable(kits[i].name.c_str(), is_selected)) {
-									weapon_skin.paint_kit = i;
-								}
-
-								ImU32 kit_color = GetRarityColor(kits[i].rarity);
-								ImVec2 p_min = ImGui::GetItemRectMin();
-								ImVec2 p_max = ImGui::GetItemRectMax();
-								ImGui::GetWindowDrawList()->AddRectFilled(
-									ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
-									ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
-									kit_color
-								);
-
-								if (is_selected) ImGui::SetItemDefaultFocus();
-								ImGui::PopID();
-							}
-						}
-						ImGui::EndCombo();
-					}
-				}
+				draw_skins_combo("Skin##weapon_skin", filter, "##FilterSkins", selected_weapon_def, weapon_skin.paint_kit);
 
 				if (weapon_skin.paint_kit) {
 					float weapon_item_width = ImGui::CalcItemWidth();
@@ -435,7 +421,7 @@ static void draw_skins_tab() {
 			}
 		}
 		else {
-			ImGui::TextDisabled("Loading weapons...");
+			get_loading_progress();
 		}
 	}
 
@@ -536,10 +522,12 @@ void c_menu::draw() {
 	setup_style();
 
 	float scale = m_dpi_scale;
-	ImVec2 window_size(520.0f * scale, 480.0f * scale);
+	ImVec2 window_size(m_main_window_size.x * scale, m_main_window_size.y * scale);
 
 	ImGui::SetNextWindowSize(window_size, ImGuiCond_Once);
 	ImGui::Begin("Nerv", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+	m_main_window_pos = ImGui::GetWindowPos();
 
 	ImGui::BeginChild("tabs", ImVec2(100.0f * scale, 0), true);
 	{
