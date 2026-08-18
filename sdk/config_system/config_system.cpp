@@ -58,6 +58,9 @@ void c_config_system::setup_values() {
         push_char_array(g_cfg->skin_changer.weapon_skins[i].custom_name, sizeof(g_cfg->skin_changer.weapon_skins[i].custom_name), "skin_changer", prefix + "_custom_name");
     }
 
+    push_item(&g_cfg->visuals.m_enable_smoke, "visuals", "remove_smoke", false);
+    push_item(&g_cfg->visuals.m_enable_draw_flashbang, "visuals", "remove_flash", false);
+
     refresh();
 }
 

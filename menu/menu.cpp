@@ -496,6 +496,15 @@ static void draw_config_tab(float scale) {
 		g_config_system->refresh();
 }
 
+static void draw_visauls_tab()
+{
+	ImGui::Text("Visuals");
+	ImGui::Separator();
+
+	ImGui::Checkbox("Remove Smoke", &g_cfg->visuals.m_enable_smoke);
+	ImGui::Checkbox("Remove Flash", &g_cfg->visuals.m_enable_draw_flashbang);
+}
+
 bool g_waiting_for_key = false;
 
 static void draw_settings_tab() {
@@ -531,7 +540,7 @@ void c_menu::draw() {
 
 	ImGui::BeginChild("tabs", ImVec2(100.0f * scale, 0), true);
 	{
-		static constexpr const char* tabs[]{ "Skins", "Config","Settings" };
+		static constexpr const char* tabs[]{ "Skins", "Visuals", "Config","Settings" };
 
 		for (std::size_t i = 0; i < IM_ARRAYSIZE(tabs); ++i) {
 			if (ImGui::Selectable(tabs[i], m_selected_tab == static_cast<int>(i)))
@@ -548,12 +557,18 @@ void c_menu::draw() {
 	}
 
 	if (m_selected_tab == 1) {
+		ImGui::BeginChild("visuals_content", ImVec2(0, 0), true);
+		draw_visauls_tab();
+		ImGui::EndChild();
+	}
+
+	if (m_selected_tab == 2) {
 		ImGui::BeginChild("config_content", ImVec2(0, 0), true);
 		draw_config_tab(scale);
 		ImGui::EndChild();
 	}
 
-	if (m_selected_tab == 2) {
+	if (m_selected_tab == 3) {
 		ImGui::BeginChild("settings_content", ImVec2(0, 0), true);
 		draw_settings_tab();
 		ImGui::EndChild();

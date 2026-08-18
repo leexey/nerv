@@ -103,6 +103,18 @@ bool c_hooks::initialize() {
 		level_init::hk_level_init
 	);
 
+	//	Xrefs from, sub:
+	//	#STR: "VolumeMaxs", "VolumeMins", "Priority", "LPVIndex", "`anonymous-namespace'::DynamicLockHelper<struct `anonymous, "`anonymous-namespace'::DynamicLockHelper<struct `anonymous, "LockDynamicConstantBuffer failed in %s\n", "Transform"
+	smoke_voxel_draw::m_smoke_voxel_draw.hook(
+		g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 41 56 41 57 48 83 EC 40 48 8B 9C 24 ? ? ? ? 4D 8B F8 48 8B FA 48 8B F1 45 33 C0 BA"),
+		smoke_voxel_draw::hk_smoke_voxel_draw
+	);
+	// #STR: "cs_flash_frame_render_target_split_%d", "FlashbangOverlay", "CsgoForward"
+	draw_flashbang_overlay::m_draw_flashbang_overlay.hook(
+		g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "85 D2 0F 88 ?? ?? ?? ?? 48 89 4C 24 ?? 55 56 41 55 41 56 41 57 48 8D AC 24"),
+		draw_flashbang_overlay::hk_draw_flashbang_overlay
+	);
+
 	if (g_directx->m_present_address)
 		present::m_present.hook(g_directx->m_present_address, present::hk_present);
 	if (g_directx->m_resize_buffers_address)
@@ -253,6 +265,26 @@ bool __fastcall hooks::fire_event_client_side::hk_fire_event_client_side(void* p
 	}
 
 	return original(p_game_event_manager, p_game_event);
+}
+
+void* __fastcall hooks::smoke_voxel_draw::hk_smoke_voxel_draw(void* a1, void* a2, int a3, int a4, void* a5, void* a6)
+{
+	auto original = m_smoke_voxel_draw.get_original<decltype(&hk_smoke_voxel_draw)>();
+
+	if (g_cfg->visuals.m_enable_smoke)
+		return NULL;
+
+	return original(a1, a2, a3, a4, a5, a6);
+}
+
+void __fastcall hooks::draw_flashbang_overlay::hk_draw_flashbang_overlay(void* a1, int a2, __int64* a3, __int64 a4, __m128* a5)
+{
+	auto original = m_draw_flashbang_overlay.get_original<decltype(&hk_draw_flashbang_overlay)>();
+
+	if (g_cfg->visuals.m_enable_draw_flashbang)
+		return;
+
+	original(a1, a2, a3, a4, a5);
 }
 
 HRESULT hooks::present::hk_present(IDXGISwapChain* swap_chain, unsigned int sync_interval, unsigned int flags) {

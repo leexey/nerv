@@ -82,6 +82,16 @@ namespace hooks {
 		__int64 __fastcall hk_level_init(void* rcx, void* rdx);
 	}
 
+	namespace smoke_voxel_draw {
+		inline c_hook m_smoke_voxel_draw;
+		void* __fastcall hk_smoke_voxel_draw(void* a1, void* a2, int a3, int a4, void* a5, void* a6);
+	}
+
+	namespace draw_flashbang_overlay {
+		inline c_hook m_draw_flashbang_overlay;
+		void __fastcall hk_draw_flashbang_overlay(void* a1, int a2, __int64* a3, __int64 a4, __m128* a5);
+	}
+
 	namespace present {
 		inline c_hook m_present;
 		HRESULT hk_present(IDXGISwapChain* swap_chain, unsigned int sync_interval, unsigned int flags);
@@ -96,6 +106,7 @@ namespace hooks {
 		inline c_hook m_create_swap_chain;
 		HRESULT __stdcall hk_create_swap_chain(IDXGIFactory* factory, IUnknown* device, DXGI_SWAP_CHAIN_DESC* desc, IDXGISwapChain** swap_chain);
 	}
+
 }
 
 class c_hooks {

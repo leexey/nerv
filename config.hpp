@@ -59,6 +59,13 @@ public:
 		int m_menu_key = 0x2D;
 	} misc;
 
+	struct visuals_t
+	{
+		bool m_enable_smoke = false;
+		bool m_enable_draw_flashbang = false;
+
+	} visuals;
+
 };
 
 #define g_cfg g_config
