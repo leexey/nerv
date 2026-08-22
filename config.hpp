@@ -31,6 +31,12 @@ public:
 		int m_agent = 0;
 	} agent_changer;
 
+	struct custom_model_t {
+		bool m_enabled = false;
+		bool m_should_update = false;
+		std::string m_model_path = "agents/models/tm_phoenix/tm_phoenix.vmdl";
+	} custom_model;
+
 	struct skin_changer_t {
 		bool m_enabled = false;
 		int m_selected_weapon = 0;
@@ -49,9 +55,6 @@ public:
 			return 0;
 		}
 	} skin_changer;
-
-	bool bShouldUpdate = false;
-	std::string sPathToModel = "agents/models/tm_phoenix/tm_phoenix.vmdl";
 
 	struct misc_t
 	{

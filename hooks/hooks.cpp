@@ -2,13 +2,13 @@
 #include "../directx/directx.hpp"
 #include "../menu/menu.hpp"
 #include "../features/shared/item_schema.hpp"
-#include "../features/skin_changer/skin_changer.hpp"
-#include "../features/glove_changer/glove_changer.hpp"
+#include "../features/shared/shared.hpp"
 #include "../features//agent_changer/agent_changer.hpp"
 #include "../valve/interfaces/vtables/i_csgo_input.hpp"
 #include "../valve/interfaces/vtables/i_game_event.hpp"
 #include "../valve/classes/c_cs_player_pawn.hpp"
 #include "../sdk/includes/hash.hpp"
+
 
 using namespace hooks;
 
@@ -189,9 +189,7 @@ void hooks::frame_stage_notify::hk_frame_stage_notify(void* source_to_client, in
 		g_ctx->m_local_pawn = g_interfaces->m_entity_system->get_local_pawn();
 
 		if (g_ctx->m_local_pawn != nullptr && g_ctx->m_local_controller != nullptr) {
-			g_skin_changer->run();
-			g_glove_changer->run();
-			g_agent_changer->run();
+			g_changer->run();
 		}
 	}
 
@@ -226,7 +224,7 @@ bool __fastcall hooks::fire_event_client_side::hk_fire_event_client_side(void* p
 
 	if ((event_hash == event_hashes::round_start || event_hash == event_hashes::item_purchase))
 	{
-		g_skin_changer->should_update |= g_cfg->knife_changer.m_enabled || g_cfg->skin_changer.m_enabled;
+		//g_skin_changer->should_update |= g_cfg->knife_changer.m_enabled || g_cfg->skin_changer.m_enabled;
 		//g_glove_changer->should_update |= g_cfg->glove_changer.m_enabled;
 		return original(p_game_event_manager, p_game_event);
 	}
@@ -240,9 +238,13 @@ bool __fastcall hooks::fire_event_client_side::hk_fire_event_client_side(void* p
 	i_game_event::CUtlStringToken attacker_token("attacker");
 	attacker_token.pad = 0xFFFFFFFF;
 
-	void* attacker_controller = i_game_event::get_player_controller(p_game_event, &attacker_token);
+	c_cs_player_controller* attacker_controller = reinterpret_cast<c_cs_player_controller*>(i_game_event::get_player_controller(p_game_event, &attacker_token));
+	if (!valid_ptr(attacker_controller))
+		return original(p_game_event_manager, p_game_event);
 
-	if (attacker_controller != g_ctx->m_observer_target)
+	const auto attacker_pawn = g_interfaces->m_game_resource->pGameEntitySystem->Get<c_cs_player_pawn>(attacker_controller->m_pawn());
+
+	if (attacker_pawn != g_ctx->m_observer_target)
 		return original(p_game_event_manager, p_game_event);
 
 	i_game_event::CUtlStringToken weapon_token("weapon");

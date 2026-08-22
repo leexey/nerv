@@ -28,6 +28,9 @@ void c_interfaces::initialize()
 	m_source2_client = get_interface<c_source2_client>(&g_modules->m_modules.client_dll, xorstr_("Source2Client002"));
 	CHECK(xorstr_("Source2Client"), m_source2_client);
 
+	m_engine2_to_client = get_interface<ISource2EngineToClient>(&g_modules->m_modules.engine_dll, xorstr_("Source2EngineToClient001"));
+	CHECK(xorstr_("Source2EngineToClient"), m_engine2_to_client);
+
 	m_file_system = get_interface<i_file_system>(&g_modules->m_modules.filesystem_stdio, xorstr_("VFileSystem017"));
 	CHECK(xorstr_("FileSystem"), m_file_system);
 

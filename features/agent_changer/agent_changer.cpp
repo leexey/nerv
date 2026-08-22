@@ -2,57 +2,26 @@
 #include "../shared/econ_item_attribute_manager.hpp"
 #include "../../valve/interfaces/interfaces.hpp"
 
-void c_agent_changer::custom_model()
+void c_agent_changer::custom_model(c_cs_player_pawn* observer_target, engine_data current)
 {
-	if (!g_cfg->bShouldUpdate)
+	if (g_cfg->custom_model.m_model_path.empty() || g_cfg->agent_changer.m_enabled || !g_cfg->custom_model.m_enabled)
 		return;
 
-	auto* local_pawn = reinterpret_cast<c_cs_player_pawn*>(g_ctx->m_local_pawn);
-	if (!valid_ptr(local_pawn) || local_pawn->m_health() <= 0)
-	{
-		g_cfg->bShouldUpdate = false;
+	if (!g_cfg->custom_model.m_should_update && !current.state_changed(backup_engine_data) && current.m_demo_tick >= general_engine_backup.m_demo_tick /*simple workaraound, idk how to actually fix it rn. prob its possible to check the model name and compare it -> https://www.unknowncheats.me/forum/counter-strike-2-a/606375-reading-player-model-name.html*/)
 		return;
-	}
 
-	auto observer_service = local_pawn->m_observer_services();
-	if (!observer_service || observer_service->m_observer_mode() == 0)
-	{
-		g_cfg->bShouldUpdate = false;
-		return;
-	}
-
-	auto observer_target = g_interfaces->m_game_resource->pGameEntitySystem->Get<c_cs_player_pawn>(observer_service->m_observer_target());
-	if (!valid_ptr(observer_target) || observer_target->m_health() <= 0)
-	{
-		g_cfg->bShouldUpdate = false;
-		return;
-	}
-
-	const char* szPathModel = g_cfg->sPathToModel.c_str();
+	const char* szPathModel = g_cfg->custom_model.m_model_path.c_str();
 	g_interfaces->m_resource_system->BlockingLoadResourceByName(szPathModel, 0);
 
 	observer_target->set_model(szPathModel);
 
-	g_cfg->bShouldUpdate = false;
+	backup_engine_data = current;
+	g_cfg->custom_model.m_should_update = false;
 }
 
-void c_agent_changer::run()
+void c_agent_changer::agent_model(c_cs_player_pawn* observer_target, engine_data current)
 {
-	this->custom_model();
-
-	if (!g_cfg->agent_changer.m_enabled || !g_ctx->m_local_pawn)
-		return;
-
-	auto* local_pawn = reinterpret_cast<c_cs_player_pawn*>(g_ctx->m_local_pawn);
-	if (!valid_ptr(local_pawn) || local_pawn->m_health() <= 0)
-		return;
-
-	auto observer_service = local_pawn->m_observer_services();
-	if (!observer_service || observer_service->m_observer_mode() == 0)
-		return;
-
-	auto observer_target = g_interfaces->m_game_resource->pGameEntitySystem->Get<c_cs_player_pawn>(observer_service->m_observer_target());
-	if (!valid_ptr(observer_target) || observer_target->m_health() <= 0)
+	if (!g_cfg->agent_changer.m_enabled)
 		return;
 
 	auto* identity = observer_target->m_entity();
@@ -62,29 +31,30 @@ void c_agent_changer::run()
 	if (!identity->is_safe_to_modify())
 		return;
 
-	if(!g_item_schema->is_initialized()
-		|| g_cfg->agent_changer.m_agent >= (int)g_item_schema->agents.size())
+	if (g_cfg->agent_changer.m_agent >= (int)g_item_schema->agents.size())
 		return;
 
 	const char* agent_model_path = g_item_schema->agents[g_cfg->agent_changer.m_agent].model_path;
 	if (agent_model_path[0] == '\0')
 		return;
 
-	const float current_spawn_time = observer_target->m_last_spawn_time_index();
-	const int   current_team = observer_target->m_team_num();
-	const bool team_changed = (current_team != m_last_team) && m_last_team != 0;
-	const bool spawn_changed = (current_spawn_time != m_last_spawn_time);
-	const bool pawn_state_changed = team_changed || spawn_changed;
+	const bool config_changed = memcmp(&agent_backup_cfg, &g_cfg->agent_changer, sizeof(agent_backup_cfg)) != 0;
 
-	if ((pawn_state_changed) && !should_update)
+	if (current.state_changed(backup_engine_data) || config_changed || current.m_demo_tick < general_engine_backup.m_demo_tick /*simple workaraound, idk how to actually fix it rn. prob its possible to check the model name and compare it -> https://www.unknowncheats.me/forum/counter-strike-2-a/606375-reading-player-model-name.html*/)
 		should_update = true;
 
-	if(!should_update)
+	if (!should_update)
 		return;
 
 	observer_target->set_model(agent_model_path);
 
-	m_last_spawn_time = current_spawn_time;
-	m_last_team = current_team;
+	agent_backup_cfg = g_cfg->agent_changer;
+	backup_engine_data = current;
+
 	should_update = false;
+}
+
+void c_agent_changer::run(c_cs_player_pawn* observer_target, engine_data current) {
+	this->custom_model(observer_target, current);
+	this->agent_model(observer_target, current);
 }

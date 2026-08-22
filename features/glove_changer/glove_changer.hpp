@@ -1,25 +1,20 @@
 #pragma once
-
 #include "../../main.hpp"
-#include "../../valve/classes/c_cs_player_pawn.hpp"
-#include "../shared/item_schema.hpp"
 
+#include "../shared/item_schema.hpp"
+#include "../shared/data.hpp"
+
+class c_cs_player_pawn;
 class c_glove_changer {
 public:
-	void run();
+	void run(c_cs_player_pawn* observer_target, engine_data current);
 	bool should_update = false;
 
 private:
-	uint16_t m_last_glove = 0;
-	int m_last_paint_kit_id = 0;
-	float m_last_spawn_time = -1.f;
-	float m_last_wear = 0.0001f;
-	int m_last_seed = 0;
-	int m_last_team = 0;
+	c_config::glove_changer_t glove_backup_cfg;
+	engine_data backup_engine_data;
 
 	int m_update_frames = 0;
-
 	int m_clear_frames = 0;
 };
-
 inline const auto g_glove_changer = std::make_unique<c_glove_changer>();

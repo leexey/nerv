@@ -12,7 +12,7 @@ struct item_info_t {
 	uint16_t definition_index;
 	std::string name;
 	const char* model_path;
-	uint32_t subclass_id;
+	CImageProxySource* image;
 };
 
 struct paint_kit_info_t {
@@ -71,7 +71,8 @@ private:
 	progress m_init_progress;
 
 	bool is_paint_kit_for_item(const char* simple_weapon_name, c_paint_kit* paint_kit);
-	std::string get_skin_image_path(const std::string& simple_name, const char* paint_kit_name, bool check = false);
+	std::string get_skin_image_path(const std::string& simple_name, const char* paint_kit_name = "", bool check = false);
+	CImageProxySource* get_skin_image(const std::string& simple_name, const char* paint_kit_name = "", bool check = false);
 	void build_paint_kits_for_item(uint16_t def_index, c_utl_map<int, c_econ_item_definition*>& items, c_utl_map<int, c_paint_kit*>& paint_kit_map);
 };
 

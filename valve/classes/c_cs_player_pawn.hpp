@@ -784,6 +784,7 @@ class c_cs_player_pawn : public c_base_entity {
 public:
 	SCHEMA(m_weapon_services, c_player_weapon_service*, "C_BasePlayerPawn", "m_pWeaponServices");
 	SCHEMA(m_controller, c_base_handle, "C_BasePlayerPawn", "m_hController");
+	SCHEMA(m_controller_default, c_base_handle, "C_BasePlayerPawn", "m_hDefaultController");
 	SCHEMA_ARRAY(m_econ_gloves, c_econ_item_view, "C_CSPlayerPawn", "m_EconGloves");
 	SCHEMA(m_need_to_reapply_gloves, bool, "C_CSPlayerPawn", "m_bNeedToReApplyGloves");
 	SCHEMA(m_hud_model_arms, c_base_handle, "C_CSPlayerPawn", "m_hHudModelArms");
@@ -802,6 +803,14 @@ public:
 
 	c_cs_player_controller* get_controller() {
 		if (!m_controller().is_valid())
+			return nullptr;
+
+		extern void* get_entity_by_index(int index);
+		return reinterpret_cast<c_cs_player_controller*>(get_entity_by_index(m_controller().get_entry_index()));
+	}
+
+	c_cs_player_controller* get_default_controller() {
+		if (!m_controller_default().is_valid())
 			return nullptr;
 
 		extern void* get_entity_by_index(int index);

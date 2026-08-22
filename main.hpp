@@ -39,7 +39,7 @@ struct globals_t {
 	c_user_cmd* m_user_cmd;
 	void* m_local_pawn;
 	void* m_local_controller;
-	void* m_observer_target;
+	void* m_observer_target; // pawn
 };
 
 inline const auto g_ctx = std::make_unique<globals_t>();

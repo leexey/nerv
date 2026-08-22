@@ -202,7 +202,7 @@ void c_config_system::load(const std::string& name)
     }
 
     g_skin_changer->should_update = true;
-    //g_glove_changer->should_update = true;
+    g_glove_changer->should_update = true;
     save_last_state(name);
 }
 

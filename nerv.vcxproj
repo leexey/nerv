@@ -88,6 +88,8 @@
     <ClInclude Include="features\shared\econ_item_attribute_manager.hpp" />
     <ClInclude Include="features\shared\item_schema.hpp" />
     <ClInclude Include="features\glove_changer\glove_changer.hpp" />
+    <ClInclude Include="features\shared\shared.hpp" />
+    <ClInclude Include="features\shared\data.hpp" />
     <ClInclude Include="features\skin_changer\skin_changer.hpp" />
     <ClInclude Include="hooks\hooks.hpp" />
     <ClInclude Include="main.hpp" />
@@ -122,6 +124,7 @@
     <ClInclude Include="valve\interfaces\vtables\c_buffer_string_growable.hpp" />
     <ClInclude Include="valve\interfaces\vtables\iswapchaindx11.h" />
     <ClInclude Include="valve\interfaces\vtables\i_csgo_input.hpp" />
+    <ClInclude Include="valve\interfaces\vtables\i_demo_file.h" />
     <ClInclude Include="valve\interfaces\vtables\i_econ_item_system.hpp" />
     <ClInclude Include="valve\interfaces\vtables\i_entity_system.hpp" />
     <ClInclude Include="valve\interfaces\vtables\i_file_system.hpp" />
@@ -133,6 +136,7 @@
     <ClInclude Include="valve\interfaces\vtables\i_panorama.h" />
     <ClInclude Include="valve\interfaces\vtables\i_resource_system.hpp" />
     <ClInclude Include="valve\interfaces\vtables\i_schema_system.hpp" />
+    <ClInclude Include="valve\interfaces\vtables\i_source2_engine_to_client.h" />
     <ClInclude Include="valve\interfaces\vtables\netmessages.pb.h" />
     <ClInclude Include="valve\interfaces\vtables\network_connection.pb.h" />
     <ClInclude Include="valve\interfaces\vtables\networkbasetypes.pb.h" />
@@ -148,6 +152,7 @@
     <ClCompile Include="features\glove_changer\glove_changer.cpp" />
     <ClCompile Include="features\shared\econ_item_attribute_manager.cpp" />
     <ClCompile Include="features\shared\item_schema.cpp" />
+    <ClCompile Include="features\shared\shared.cpp" />
     <ClCompile Include="features\skin_changer\skin_changer.cpp" />
     <ClCompile Include="hooks\hooks.cpp" />
     <ClCompile Include="menu\menu.cpp" />

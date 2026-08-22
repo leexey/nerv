@@ -128,8 +128,20 @@ void c_menu::setup_style() {
 	style.WindowRounding = 8.0f * scale;
 	style.ChildRounding = 6.0f * scale;
 	style.FrameRounding = 4.0f * scale;
-	style.WindowBorderSize = 1.0f;
-	style.FrameBorderSize = 1.0f;
+	style.ScrollbarSize = 14.0f * scale;
+	style.ScrollbarRounding = 9.0f * scale;
+	style.WindowBorderSize = 1.0f * scale;
+	style.FrameBorderSize = 1.0f * scale;
+	style.WindowPadding = ImVec2(8, 8) * scale;
+	style.WindowBorderSize = 1.0f * scale;
+	style.ChildBorderSize = 1.0f * scale;
+	style.PopupBorderSize = 1.0f * scale;
+	style.FramePadding = ImVec2(4, 3) * scale;
+	style.ItemSpacing = ImVec2(8, 4) * scale;
+	style.ItemInnerSpacing = ImVec2(4, 4) * scale;
+	style.CellPadding = ImVec2(4, 2) * scale;
+	style.ColumnsMinSpacing = 6.0f * scale;  
+	style.GrabMinSize = 12.0f * scale;
 
 	colors[ImGuiCol_WindowBg] = ImVec4(0.98f, 0.98f, 1.00f, 1.00f);
 	colors[ImGuiCol_ChildBg] = ImVec4(0.96f, 0.96f, 0.98f, 1.00f);
@@ -201,14 +213,15 @@ void draw_skins_combo(const char* combo_label, ImGuiTextFilter& filter, const ch
 				paint_kit = i;
 			}
 
+			const float m_dpi_scale = g_menu->get_dpi_scale();
+
 			ImU32 kit_color = GetRarityColor(kits[i].rarity);
 			ImVec2 p_min = ImGui::GetItemRectMin();
 			ImVec2 p_max = ImGui::GetItemRectMax();
-			ImGui::GetWindowDrawList()->AddRectFilled(
-				ImVec2(p_min.x + 1.0f, p_min.y + 1.0f),
-				ImVec2(p_min.x + 4.0f, p_max.y - 1.0f),
-				kit_color
-			);
+
+			const float padding{ 1.0f * m_dpi_scale };
+			const float padding2{ 4.0f * m_dpi_scale };
+			ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p_min.x + padding, p_min.y + padding), ImVec2(p_min.x + padding2, p_max.y - padding), kit_color);
 			
 			if (ImGui::IsItemHovered() && kits[i].image != nullptr && render_preview) {
 				const static float spacing = style.ItemSpacing.x;
@@ -218,12 +231,11 @@ void draw_skins_combo(const char* combo_label, ImGuiTextFilter& filter, const ch
 				//const ImVec2 image_size_raw {512, 384};
 				if (image_size_raw.x != 0 && image_size_raw.y != 0) {
 
-					const float m_dpi_scale = g_menu->get_dpi_scale();
 					const ImVec2 window_position = ImGui::GetWindowPos();
 					const ImVec2 window_size = ImGui::GetWindowSize();
 					const ImVec2 image_size = ImVec2(window_size.y * image_size_raw.x / image_size_raw.y, window_size.y);
 
-					ImRect hint_bb(window_position + ImVec2(spacing + window_size.x, 0) * m_dpi_scale, window_position + ImVec2(window_size.x + image_size.x + spacing, image_size.y) * m_dpi_scale);
+					ImRect hint_bb(window_position + ImVec2(spacing + window_size.x, 0), window_position + ImVec2(window_size.x + image_size.x + spacing, image_size.y));
 
 					ImGui::PushClipRect(hint_bb.Min, hint_bb.Max, true);
 					ImGui::GetForegroundDrawList()->AddRectFilled(hint_bb.Min, hint_bb.Max, ImGui::GetColorU32(ImGuiCol_ChildBg), rounding);
@@ -351,34 +363,6 @@ static void draw_skins_tab() {
 	}
 
 	ImGui::Spacing();
-	ImGui::Text("Agent Changer");
-	ImGui::Separator();
-	ImGui::Checkbox("Enabled##agent", &g_cfg->agent_changer.m_enabled);
-
-	if (g_cfg->agent_changer.m_enabled)
-	{
-		if (g_item_schema->is_initialized() && !g_item_schema->agent_names_cstr.empty())
-		{
-			static int agent_selected = 0;
-
-			ImGui::Combo("Agent Model", &g_cfg->agent_changer.m_agent,
-				g_item_schema->agent_names_cstr.data(),
-				(int)g_item_schema->agent_names_cstr.size());
-
-			if (agent_selected != g_cfg->agent_changer.m_agent)
-			{
-				g_agent_changer->should_update = true;
-			}
-
-			agent_selected = g_cfg->agent_changer.m_agent;
-		}
-		else
-		{
-			get_loading_progress();
-		}
-	}
-
-	ImGui::Spacing();
 	ImGui::Text("Skin Changer");
 	ImGui::Separator();
 	ImGui::Checkbox("Enabled##skin", &g_cfg->skin_changer.m_enabled);
@@ -413,11 +397,10 @@ static void draw_skins_tab() {
 					ImGui::InputInt("Wear / Seed##weapon", &weapon_skin.seed, 0, 0);
 					ImGui::InputText("Name##weapon_name", weapon_skin.custom_name,
 						sizeof(weapon_skin.custom_name));
-
-					if (ImGui::Button("Apply Skins##skin_apply")) {
-						g_skin_changer->should_update = true;
-					}
 				}
+			}
+			if (ImGui::Button("Apply Skins##skin_apply")) {
+				g_skin_changer->should_update = true;
 			}
 		}
 		else {
@@ -426,14 +409,86 @@ static void draw_skins_tab() {
 	}
 
 	ImGui::Spacing();
+	ImGui::Text("Agent Changer");
+	ImGui::Separator();
+	ImGui::Checkbox("Enabled##agent", &g_cfg->agent_changer.m_enabled);
+
+	if (g_cfg->agent_changer.m_enabled)
+	{
+		static ImGuiTextFilter filter;
+		if (g_item_schema->is_initialized() && !g_item_schema->agent_names_cstr.empty())
+		{
+			ImGuiStyle& style = ImGui::GetStyle();
+			filter.Draw("##FilterAgents"); ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ style.FramePadding.x, style.ItemSpacing.y }); ImGui::SameLine(); ImGui::Text(("Search")); ImGui::PopStyleVar();
+
+			const char* preview_value = (g_cfg->agent_changer.m_agent < (int)g_item_schema->agent_names_cstr.size()) ? g_item_schema->agent_names_cstr[g_cfg->agent_changer.m_agent] : "";
+
+			if (ImGui::BeginCombo("Agent Model", preview_value)) {
+				for (int i = 0; i < (int)g_item_schema->agent_names_cstr.size(); i++) {
+					const bool is_selected = (g_cfg->agent_changer.m_agent == i);
+
+					if (filter.PassFilter(g_item_schema->agent_names_cstr[i])) {
+						ImGui::PushID(i);
+
+						if (ImGui::Selectable(g_item_schema->agent_names_cstr[i], is_selected)) {
+							g_cfg->agent_changer.m_agent = i;
+						}
+
+						// agent image l8r
+
+						if (ImGui::IsItemHovered() && g_item_schema->agents[i].image != nullptr) {
+							const static float spacing = style.ItemSpacing.x;
+							const static float rounding = 0.f;
+
+							const ImVec2 image_size_raw = g_item_schema->agents[i].image->GetImageSize();
+							//const ImVec2 image_size_raw {512, 384};
+							if (image_size_raw.x != 0 && image_size_raw.y != 0) {
+
+								const ImVec2 window_position = ImGui::GetWindowPos();
+								const ImVec2 window_size = ImGui::GetWindowSize();
+								const ImVec2 image_size = ImVec2(window_size.y * image_size_raw.x / image_size_raw.y, window_size.y);
+
+								ImRect hint_bb(window_position + ImVec2(spacing + window_size.x, 0), window_position + ImVec2(window_size.x + image_size.x + spacing, image_size.y));
+
+								ImGui::PushClipRect(hint_bb.Min, hint_bb.Max, true);
+								ImGui::GetForegroundDrawList()->AddRectFilled(hint_bb.Min, hint_bb.Max, ImGui::GetColorU32(ImGuiCol_ChildBg), rounding);
+								ImGui::GetForegroundDrawList()->AddRect(hint_bb.Min, hint_bb.Max, ImGui::GetColorU32(ImGuiCol_Border), rounding);
+								ImGui::GetForegroundDrawList()->AddImage((ImTextureID)g_item_schema->agents[i].image->GetNativeTexture(), hint_bb.Min, hint_bb.Max);
+								ImGui::PopClipRect();
+							}
+						}
+
+						if (is_selected)
+							ImGui::SetItemDefaultFocus();
+
+						ImGui::PopID();
+					}
+				}
+				ImGui::EndCombo();
+			}
+		}
+		else
+		{
+			get_loading_progress();
+		}
+	}
+
+	ImGui::Spacing();
 	ImGui::Text("Player Model Changer");
 	ImGui::Separator();
-
-	ImGui::Text("Player Model Path");
-	ImGui::InputText("##CustomModel", &g_cfg->sPathToModel);
-	if (ImGui::Button("Apply Model"))
-	{
-		g_cfg->bShouldUpdate = true;
+	ImGui::Checkbox("Enabled##custom_model", &g_cfg->custom_model.m_enabled);
+	if (g_cfg->custom_model.m_enabled) {
+		if (g_item_schema->is_initialized()) {
+			ImGui::Text("Player Model Path");
+			ImGui::InputText("##CustomModel", &g_cfg->custom_model.m_model_path);
+			if (ImGui::Button("Apply Model"))
+			{
+				g_cfg->custom_model.m_should_update = true;
+			}
+		}
+		else {
+			get_loading_progress();
+		}
 	}
 }
 

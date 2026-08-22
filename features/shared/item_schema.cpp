@@ -36,6 +36,26 @@ std::string c_item_schema::get_skin_image_path(const std::string& simple_name, c
 	return path;
 }
 
+CImageProxySource* c_item_schema::get_skin_image(const std::string& simple_name, const char* paint_kit_name, bool check) {
+	CImageProxySource* image = nullptr;
+
+	CUIEngineSource2* ui_engine = g_interfaces->m_panorama->AccessUIEngine();
+	CImageResourceManager* resource_manager = ui_engine ? ui_engine->GetResourceManager() : nullptr;
+	const std::string skin_image_path = get_skin_image_path(simple_name, paint_kit_name, check);
+
+	if (resource_manager && !skin_image_path.empty()) {
+		image = resource_manager->LoadImageInternal(skin_image_path.c_str(), EImageFormat::RGBA8888);
+	}
+
+	if (image == nullptr)
+		if (paint_kit_name)
+			LOG_ERROR(u8"Image for '%s | %s' is nullptr", simple_name, paint_kit_name);
+		else
+			LOG_ERROR(u8"Image for '%s' is nullptr", simple_name);
+
+	return image;
+}
+
 bool c_item_schema::is_paint_kit_for_item(const char* simple_weapon_name, c_paint_kit* paint_kit) {
 	if (!simple_weapon_name || !paint_kit || !paint_kit->m_name)
 		return false;
@@ -95,19 +115,7 @@ void c_item_schema::build_paint_kits_for_item(uint16_t def_index, c_utl_map<int,
 				if (final_rarity > 6) final_rarity = 6;
 			}
 
-			CUIEngineSource2* ui_engine = g_interfaces->m_panorama->AccessUIEngine();
-			CImageResourceManager* resource_manager = ui_engine ? ui_engine->GetResourceManager() : nullptr;
-
-			const std::string skin_image_path = get_skin_image_path(simple_name, kit->m_name);
-			CImageProxySource* image = nullptr;
-			
-			if (resource_manager && !skin_image_path.empty()) {
-				image = resource_manager->LoadImageInternal(skin_image_path.c_str(), EImageFormat::RGBA8888);
-			}
-
-			if (image == nullptr)
-				LOG_ERROR(u8"Image for '%s | %s' is nullptr", simple_name, kit->m_name);
-
+			CImageProxySource* image = get_skin_image(simple_name, kit->m_name);
 			item_paint_kits[def_index].push_back({
 				kit->m_id,
 				std::string(display),
@@ -185,7 +193,8 @@ void c_item_schema::initialize() {
 		}
 		else if (item_def->is_agent())
 		{
-			agents.push_back({ item_def->m_definition_index, item_name, model_path });
+			CImageProxySource* image = get_skin_image(item_def->get_item_name());
+			agents.push_back({ item_def->m_definition_index, item_name, model_path, image });
 		}
 		else {
 			const char* type_name = item_def->m_item_type_name;

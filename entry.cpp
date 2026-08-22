@@ -43,7 +43,6 @@ uintptr_t __stdcall start_address(const HMODULE h_module)
         g_config_system->auto_load_key();
 
         g_item_schema->initialize();
-        g_skin_changer->initialize();
       
         g_config_system->auto_load();
 
