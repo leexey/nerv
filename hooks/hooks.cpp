@@ -85,6 +85,7 @@ bool c_hooks::initialize() {
 		i_game_event::get_player_controller = reinterpret_cast<i_game_event::GetPlayerControllerFn>(g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "48 83 EC 38 8B 02 4C 8D 44 24 20"));
 	}
 
+	/*
 	if (g_modules->m_modules.afxhooksource2_dll.get()) {
 		fire_event_client_side::m_fire_event_client_side.hook(
 			g_opcodes->scan(g_modules->m_modules.afxhooksource2_dll.get_name(), "48 89 5C 24 10 48 89 6C 24 20"),
@@ -94,6 +95,15 @@ bool c_hooks::initialize() {
 	else {
 		fire_event_client_side::m_fire_event_client_side.hook(
 			g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "40 53 41 54 41 56 48 83 EC ? 4C 8B F2"),
+			fire_event_client_side::hk_fire_event_client_side
+		);
+	}*/
+	if (!g_modules->m_modules.afxhooksource2_dll.get()) {
+		fire_event_client_side::m_fire_event_client_side.hook(
+			g_opcodes->scan(
+				g_modules->m_modules.client_dll.get_name(),
+				"40 53 41 54 41 56 48 83 EC ? 4C 8B F2"
+			),
 			fire_event_client_side::hk_fire_event_client_side
 		);
 	}

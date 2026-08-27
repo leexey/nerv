@@ -39,20 +39,18 @@ public:
 	}
 
 	void* get_local_pawn() {
-
 		static auto fn = reinterpret_cast<void* (__fastcall*)(int)>(
-			g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "48 83 EC ? 83 F9 ? 75 ? 48 8B 0D ? ? ? ? 48 8D 54 24 ? 48 8B 01 FF 90 ? ? ? ? 8B 08 48 63 C1 4C 8D 05")
-			);
+			reinterpret_cast<std::uintptr_t>(
+				g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "4C 8D 05 ? ? ? ? 33 D2 4D 8B 04 C0 4D 85 C0 74")) - 0x23);
 		if (fn)
 			return fn(-1);
 		return nullptr;
 	}
 
 	void* get_local_controller() {
-
 		static auto fn = reinterpret_cast<void* (__fastcall*)(int)>(
-			g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "48 83 EC ? 83 F9 ? 75 ? 48 8B 0D ? ? ? ? 48 8D 54 24 ? 48 8B 01 FF 90 ? ? ? ? 8B 08 48 63 C1 48 8D 0D ? ? ? ? 48 8B 04 C1 48 83 C4 ? C3 CC CC CC CC CC CC CC CC CC CC CC CC CC 48 83 EC ? 83 F9")
-			);
+			reinterpret_cast<std::uintptr_t>(
+				g_opcodes->scan(g_modules->m_modules.client_dll.get_name(), "48 8D 0D ? ? ? ? 48 8B 04 C1 48 83 C4 28 C3")) - 0x23);
 		if (fn)
 			return fn(-1);
 		return nullptr;
