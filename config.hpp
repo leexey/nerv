@@ -16,6 +16,11 @@ public:
 		float m_wear = 0.0001f;
 		int m_seed = 0;
 		char m_custom_name[161] = {};
+		bool m_custom_color = false;
+		float m_color1[3];
+		float m_color2[3];
+		float m_color3[3];
+		float m_color4[3];
 	} knife_changer;
 
 	struct glove_changer_t {
@@ -24,6 +29,11 @@ public:
 		int m_paint_kit = 0;
 		float m_wear = 0.0001f;
 		int m_seed = 0;
+		bool m_custom_color = false;
+		float m_color1[3];
+		float m_color2[3];
+		float m_color3[3];
+		float m_color4[3];
 	} glove_changer;
 
 	struct agent_changer_t {
@@ -46,6 +56,11 @@ public:
 			float wear = 0.0001f;
 			int seed = 0;
 			char custom_name[161] = {};
+			bool m_custom_color = false;
+			float m_color1[3];
+			float m_color2[3];
+			float m_color3[3];
+			float m_color4[3];
 		};
 
 		weapon_skin_t weapon_skins[100];
@@ -66,6 +81,15 @@ public:
 	{
 		bool m_enable_smoke = false;
 		bool m_enable_draw_flashbang = false;
+
+		bool m_change_shadow_dir = false;
+		float m_shadow_pitch = 0.f;
+		float m_shadow_yaw = 0.f;
+		float m_shadow_roll = 0.f;
+
+		bool m_change_color_light = false;
+		float m_color_light[4] = { 1.f, 1.f, 1.f, 1.f };
+
 
 	} visuals;
 
