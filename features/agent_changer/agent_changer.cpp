@@ -4,6 +4,7 @@
 
 void c_agent_changer::custom_model(c_cs_player_pawn* observer_target, engine_data current)
 {
+	//thirdperson
 	c_model_state& p_model_state = observer_target->m_scene_node()->get_skeleton_instance()->m_model_state();
 	if (!custom_model_groups.IsEmpty() && p_model_state.get_model())
 	{
@@ -19,6 +20,27 @@ void c_agent_changer::custom_model(c_cs_player_pawn* observer_target, engine_dat
 		if (mesh_group != mesh_mask_group)
 		{
 			observer_target->m_scene_node()->set_mesh_group_mask(mesh_group);
+		}
+	}
+	//firstperson
+	if(c_base_entity* hud_arms = this->getarms(observer_target))
+	{
+		c_model_state& p_viewmodel_state = hud_arms->m_scene_node()->get_skeleton_instance()->m_model_state();
+		if (!custom_viewmodel_groups.IsEmpty() && p_viewmodel_state.get_model())
+		{
+			std::uint64_t mesh_group = 0;
+			const std::uint64_t mesh_mask_group = p_viewmodel_state.m_MeshGroupMask();
+
+			for (int i = 0; i < custom_viewmodel_groups.GetSize(); i++)
+			{
+				if (custom_viewmodel_groups.MeshBools[i])
+					mesh_group |= 1ULL << i;
+			}
+
+			if (mesh_group != mesh_mask_group)
+			{
+				hud_arms->m_scene_node()->set_mesh_group_mask(mesh_group);
+			}
 		}
 	}
 
@@ -37,7 +59,7 @@ void c_agent_changer::custom_model(c_cs_player_pawn* observer_target, engine_dat
 	g_interfaces->m_resource_system->BlockingLoadResourceByName(szPathModel, 0);
 
 	observer_target->set_model(szPathModel);
-
+	//thirdperson
 	c_model* p_model_handle = observer_target->m_scene_node()->get_skeleton_instance()->m_model_state().get_model();
 	if(p_model_handle && uPlayerModelHash != saved_last_model)
 	{
@@ -53,7 +75,25 @@ void c_agent_changer::custom_model(c_cs_player_pawn* observer_target, engine_dat
 			custom_model_groups.MeshBools[i] = is_active;
 		}
 	}
+	//firstperson
+	if (c_base_entity* hud_arms = this->getarms(observer_target))
+	{
+		c_model* p_viewmodel_handle = hud_arms->m_scene_node()->get_skeleton_instance()->m_model_state().get_model();
+		if (p_viewmodel_handle && uPlayerModelHash != saved_last_model)
+		{
+			custom_viewmodel_groups.Clear();
 
+			const std::uint64_t active_mesh_mask_group = hud_arms->m_scene_node()->get_skeleton_instance()->m_model_state().m_MeshGroupMask();
+
+			for (int i = 0; i < p_viewmodel_handle->m_MeshGroups.m_size; i++)
+			{
+				bool is_active = (active_mesh_mask_group & (1ULL << i)) != 0;
+
+				custom_viewmodel_groups.MeshNames.push_back(p_viewmodel_handle->m_MeshGroups.m_elements[i].m_pString);
+				custom_viewmodel_groups.MeshBools[i] = is_active;
+			}
+		}
+	}
 	saved_last_model = uPlayerModelHash;
 	backup_engine_data = current;
 	g_cfg->custom_model.m_should_update = false;
@@ -94,6 +134,21 @@ void c_agent_changer::agent_model(c_cs_player_pawn* observer_target, engine_data
 	backup_engine_data = current;
 
 	should_update = false;
+}
+
+c_base_entity* c_agent_changer::getarms(c_cs_player_pawn* observer_target)
+{
+	auto arms_handle = observer_target->m_hud_model_arms();
+	if (!arms_handle.is_valid())
+		return nullptr;
+
+	auto* hud_arms = reinterpret_cast<c_base_entity*>(
+		g_interfaces->m_entity_system->get_base_entity(arms_handle.get_entry_index())
+		);
+	if (!valid_ptr(hud_arms))
+		return nullptr;
+
+	return hud_arms;
 }
 
 void c_agent_changer::run(c_cs_player_pawn* observer_target, engine_data current) {

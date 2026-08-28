@@ -539,8 +539,10 @@ static void draw_skins_tab() {
 				g_cfg->custom_model.m_should_update = true;
 			}
 
-			ImGui::Text("Mesh groups");
-			ImGui::MultiCombo(("##aaa"), g_agent_changer->custom_model_groups.MeshNames.data(), g_agent_changer->custom_model_groups.MeshBools, g_agent_changer->custom_model_groups.MeshNames.size());
+			ImGui::Text("Mesh groups(ThirdPerson)");
+			ImGui::MultiCombo(("##MeshgroupsTP"), g_agent_changer->custom_model_groups.MeshNames.data(), g_agent_changer->custom_model_groups.MeshBools, g_agent_changer->custom_model_groups.MeshNames.size());
+			ImGui::Text("Mesh groups(FirstPerson)");
+			ImGui::MultiCombo(("##MeshgroupsFP"), g_agent_changer->custom_viewmodel_groups.MeshNames.data(), g_agent_changer->custom_viewmodel_groups.MeshBools, g_agent_changer->custom_viewmodel_groups.MeshNames.size());
 
 		}
 		else {

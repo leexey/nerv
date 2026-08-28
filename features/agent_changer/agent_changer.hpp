@@ -35,9 +35,11 @@ public:
 	bool should_update = false;
 
 	CustomModelVectors custom_model_groups;
+	CustomModelVectors custom_viewmodel_groups;
 private:
 	void custom_model(c_cs_player_pawn* observer_target, engine_data current);
 	void agent_model(c_cs_player_pawn* observer_target, engine_data current);
+	c_base_entity* getarms(c_cs_player_pawn* observer_target);
 
 	c_config::agent_changer_t agent_backup_cfg;
 	engine_data backup_engine_data;
