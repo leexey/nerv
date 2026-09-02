@@ -6,8 +6,8 @@
 #include <memory>
 
 class c_directx {
-	ID3D11Device* m_device;
-	ID3D11DeviceContext* m_device_context;
+	ID3D11Device* m_device = nullptr;
+	ID3D11DeviceContext* m_device_context = nullptr;
 	IDXGISwapChain* m_swap_chain = nullptr;
 	ID3D11RenderTargetView* m_render_target = nullptr;
 	IDXGIFactory* m_factory = nullptr;
@@ -29,7 +29,7 @@ public:
 	void initialize();
 	void uninitialize();
 
-	void create_render_target();
+	void create_render_target(IDXGISwapChain* swap_chain = nullptr);
 	void destroy_render_target();
 	void update_dpi_scale();
 

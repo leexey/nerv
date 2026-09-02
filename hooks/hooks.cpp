@@ -329,9 +329,11 @@ HRESULT hooks::present::hk_present(IDXGISwapChain* swap_chain, unsigned int sync
 HRESULT hooks::resize_buffers::hk_resize_buffers(IDXGISwapChain* swap_chain, UINT buffer_count, UINT width, UINT height, DXGI_FORMAT new_format, UINT swap_chain_flags) {
 	auto original = m_resize_buffers.get_original<decltype(&hk_resize_buffers)>();
 
+	g_directx->destroy_render_target();
+
 	auto result = original(swap_chain, buffer_count, width, height, new_format, swap_chain_flags);
 	if (SUCCEEDED(result))
-		g_directx->create_render_target();
+		g_directx->create_render_target(swap_chain);
 
 	return result;
 }

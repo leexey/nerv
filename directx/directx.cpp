@@ -153,20 +153,32 @@ void c_directx::uninitialize() {
 }
 
 void c_directx::create_render_target() {
+void c_directx::create_render_target(IDXGISwapChain* swap_chain) {
+	if (swap_chain)
+		m_swap_chain = swap_chain;
+
 	if (!m_swap_chain || !m_device)
 		return;
 
+	destroy_render_target();
+
 	ID3D11Texture2D* back_buffer = nullptr;
-	if (SUCCEEDED(m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&back_buffer)))) {
-		if (back_buffer) {
-			m_device->CreateRenderTargetView(back_buffer, nullptr, &m_render_target);
-			back_buffer->Release();
-			back_buffer = nullptr;
-		}
-	}
+	const HRESULT buffer_result = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&back_buffer));
+	if (FAILED(buffer_result) || !back_buffer)
+		return;
+
+	const HRESULT target_result = m_device->CreateRenderTargetView(back_buffer, nullptr, &m_render_target);
+	back_buffer->Release();
+	back_buffer = nullptr;
+
+	if (FAILED(target_result))
+		m_render_target = nullptr;
 }
 
 void c_directx::destroy_render_target() {
+	if (m_device_context && m_render_target)
+		m_device_context->OMSetRenderTargets(0, nullptr, nullptr);
+
 	if (m_render_target) {
 		m_render_target->Release();
 		m_render_target = nullptr;
@@ -197,10 +209,13 @@ void c_directx::update_dpi_scale() {
 
 void c_directx::start_frame(IDXGISwapChain* swap_chain)
 {
-	m_swap_chain = swap_chain;
+	if (swap_chain != m_swap_chain) {
+		destroy_render_target();
+		m_swap_chain = swap_chain;
+	}
 
 	if (!m_render_target)
-		create_render_target();
+		create_render_target(swap_chain);
 
 	if (m_render_target)
 		m_device_context->OMSetRenderTargets(1, &m_render_target, nullptr);
