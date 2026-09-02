@@ -152,7 +152,6 @@ void c_directx::uninitialize() {
 	m_last_dpi_scale = 0.0f;
 }
 
-void c_directx::create_render_target() {
 void c_directx::create_render_target(IDXGISwapChain* swap_chain) {
 	if (swap_chain)
 		m_swap_chain = swap_chain;
