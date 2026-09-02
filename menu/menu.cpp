@@ -2,6 +2,7 @@
 #include "menu.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 #include <string>
 #include <sdk/includes/imgui/imgui_internal.h>
@@ -17,7 +18,19 @@
 
 static constexpr const ImGuiColorEditFlags no_alpha = ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_PickerHueBar;
 static constexpr const ImGuiColorEditFlags with_alpha = ImGuiColorEditFlags_AlphaPreviewHalf | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_PickerHueBar;
+static bool g_menu_window_size_dirty = true;
 
+static void clamp_index(int& index, int size) {
+	if (size <= 0) {
+		index = 0;
+		return;
+	}
+
+	if (index < 0)
+		index = 0;
+	else if (index >= size)
+		index = size - 1;
+}
 
 ImU32 GetRarityColor(int rarity) {
 	switch (rarity) {
@@ -35,6 +48,14 @@ ImU32 GetRarityColor(int rarity) {
 void c_menu::rebuild_fonts(float scale) {
 	auto& io = ImGui::GetIO();
 
+	if (!io.Fonts || io.Fonts->Locked)
+		return;
+
+	scale = std::clamp(scale, 0.5f, 4.0f);
+	if (std::abs(m_dpi_scale - scale) <= 0.01f && io.Fonts->Fonts.Size > 0)
+		return;
+
+	ImGui_ImplDX11_InvalidateDeviceObjects();
 	io.Fonts->Clear();
 
 	ImFontConfig config;
@@ -59,16 +80,17 @@ void c_menu::rebuild_fonts(float scale) {
 	ImFont* font = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\arial.ttf", 14.0f * scale, &config, AllRanges.Data);
 
 	if (font == nullptr) {
-		io.Fonts->AddFontDefault(&config);
+		font = io.Fonts->AddFontDefault(&config);
 	}
 
 	io.Fonts->Build();
+	io.FontDefault = font;
 
-	ImGui_ImplDX11_InvalidateDeviceObjects();
 	ImGui_ImplDX11_CreateDeviceObjects();
 
 	m_dpi_scale = scale;
 	m_style_initialized = false;
+	g_menu_window_size_dirty = true;
 }
 static std::string get_key_name(int vk) {
 	if (vk == 0) return "None";
@@ -144,7 +166,7 @@ void c_menu::setup_style() {
 	style.ItemSpacing = ImVec2(8, 4) * scale;
 	style.ItemInnerSpacing = ImVec2(4, 4) * scale;
 	style.CellPadding = ImVec2(4, 2) * scale;
-	style.ColumnsMinSpacing = 6.0f * scale;  
+	style.ColumnsMinSpacing = 6.0f * scale;
 	style.GrabMinSize = 12.0f * scale;
 
 	colors[ImGuiCol_WindowBg] = ImVec4(0.98f, 0.98f, 1.00f, 1.00f);
@@ -196,13 +218,17 @@ void get_loading_progress() {
 
 void draw_skins_combo(const char* combo_label, ImGuiTextFilter& filter, const char* filter_label, const uint16_t& selected_def_index, int& paint_kit, bool render_preview = true) {
 	auto& kits = g_item_schema->item_paint_kits[selected_def_index];
-	if (kits.empty())
+	if (kits.empty()) {
+		paint_kit = 0;
 		return;
+	}
+
+	clamp_index(paint_kit, (int)kits.size());
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	filter.Draw(filter_label); ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ style.FramePadding.x, style.ItemSpacing.y }); ImGui::SameLine(); ImGui::Text(("Search")); ImGui::PopStyleVar();
 
-	const char* preview_value = (paint_kit < (int)kits.size()) ? kits[paint_kit].name.c_str() : "";
+	const char* preview_value = (paint_kit >= 0 && paint_kit < (int)kits.size()) ? kits[paint_kit].name.c_str() : "";
 
 	if (!ImGui::BeginCombo(combo_label, preview_value))
 		return;
@@ -228,8 +254,8 @@ void draw_skins_combo(const char* combo_label, ImGuiTextFilter& filter, const ch
 			ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p_min.x + padding, p_min.y + padding), ImVec2(p_min.x + padding2, p_max.y - padding), kit_color);
 			
 			if (ImGui::IsItemHovered() && kits[i].image != nullptr && render_preview) {
-				const static float spacing = style.ItemSpacing.x;
-				const static float rounding = 0.f;
+				const float spacing = style.ItemSpacing.x;
+				const float rounding = 0.f;
 
 				const ImVec2 image_size_raw = kits[i].image->GetImageSize();
 				//const ImVec2 image_size_raw {512, 384};
@@ -270,11 +296,14 @@ static void draw_skins_tab() {
 		const bool is_parsed = g_item_schema->is_initialized() && !g_item_schema->knife_names_cstr.empty();
 
 		if (is_parsed) {
+			clamp_index(g_cfg->knife_changer.m_knife, (int)g_item_schema->knife_names_cstr.size());
+
 			ImGui::Combo("Knife Model", &g_cfg->knife_changer.m_knife,
 				g_item_schema->knife_names_cstr.data(),
 				(int)g_item_schema->knife_names_cstr.size());
 
-			if (g_cfg->knife_changer.m_knife < (int)g_item_schema->knives.size()) {
+			clamp_index(g_cfg->knife_changer.m_knife, (int)g_item_schema->knives.size());
+			if (g_cfg->knife_changer.m_knife >= 0 && g_cfg->knife_changer.m_knife < (int)g_item_schema->knives.size()) {
 				selected_knife = g_item_schema->knives[g_cfg->knife_changer.m_knife].definition_index;
 			}
 
@@ -342,11 +371,14 @@ static void draw_skins_tab() {
 		const bool is_parsed = g_item_schema->is_initialized() && !g_item_schema->glove_names_cstr.empty();
 
 		if (is_parsed) {
+			clamp_index(g_cfg->glove_changer.m_glove, (int)g_item_schema->glove_names_cstr.size());
+
 			ImGui::Combo("Glove Model", &g_cfg->glove_changer.m_glove,
 				g_item_schema->glove_names_cstr.data(),
 				(int)g_item_schema->glove_names_cstr.size());
 
-			if (g_cfg->glove_changer.m_glove < (int)g_item_schema->gloves.size()) {
+			clamp_index(g_cfg->glove_changer.m_glove, (int)g_item_schema->gloves.size());
+			if (g_cfg->glove_changer.m_glove >= 0 && g_cfg->glove_changer.m_glove < (int)g_item_schema->gloves.size()) {
 				selected_glove = g_item_schema->gloves[g_cfg->glove_changer.m_glove].definition_index;
 			}
 
@@ -409,11 +441,14 @@ static void draw_skins_tab() {
 		const bool is_parsed = g_item_schema->is_initialized() && !g_item_schema->weapon_names_cstr.empty();
 
 		if (is_parsed) {
+			clamp_index(g_cfg->skin_changer.m_selected_weapon, (int)g_item_schema->weapon_names_cstr.size());
+
 			ImGui::Combo("Weapon", &g_cfg->skin_changer.m_selected_weapon,
 				g_item_schema->weapon_names_cstr.data(),
 				(int)g_item_schema->weapon_names_cstr.size());
 
-			if (g_cfg->skin_changer.m_selected_weapon < (int)g_item_schema->weapons.size()) {
+			clamp_index(g_cfg->skin_changer.m_selected_weapon, (int)g_item_schema->weapons.size());
+			if (g_cfg->skin_changer.m_selected_weapon >= 0 && g_cfg->skin_changer.m_selected_weapon < (int)g_item_schema->weapons.size()) {
 				selected_weapon_def = g_item_schema->weapons[g_cfg->skin_changer.m_selected_weapon].definition_index;
 			}
 
@@ -474,7 +509,8 @@ static void draw_skins_tab() {
 			ImGuiStyle& style = ImGui::GetStyle();
 			filter.Draw("##FilterAgents"); ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ style.FramePadding.x, style.ItemSpacing.y }); ImGui::SameLine(); ImGui::Text(("Search")); ImGui::PopStyleVar();
 
-			const char* preview_value = (g_cfg->agent_changer.m_agent < (int)g_item_schema->agent_names_cstr.size()) ? g_item_schema->agent_names_cstr[g_cfg->agent_changer.m_agent] : "";
+			clamp_index(g_cfg->agent_changer.m_agent, (int)g_item_schema->agent_names_cstr.size());
+			const char* preview_value = (g_cfg->agent_changer.m_agent >= 0 && g_cfg->agent_changer.m_agent < (int)g_item_schema->agent_names_cstr.size()) ? g_item_schema->agent_names_cstr[g_cfg->agent_changer.m_agent] : "";
 
 			if (ImGui::BeginCombo("Agent Model", preview_value)) {
 				for (int i = 0; i < (int)g_item_schema->agent_names_cstr.size(); i++) {
@@ -489,9 +525,9 @@ static void draw_skins_tab() {
 
 						// agent image l8r
 
-						if (ImGui::IsItemHovered() && g_item_schema->agents[i].image != nullptr) {
-							const static float spacing = style.ItemSpacing.x;
-							const static float rounding = 0.f;
+						if (i < (int)g_item_schema->agents.size() && ImGui::IsItemHovered() && g_item_schema->agents[i].image != nullptr) {
+							const float spacing = style.ItemSpacing.x;
+							const float rounding = 0.f;
 
 							const ImVec2 image_size_raw = g_item_schema->agents[i].image->GetImageSize();
 							//const ImVec2 image_size_raw {512, 384};
@@ -636,7 +672,7 @@ static void draw_visauls_tab()
 	ImGui::EndDisabled();
 
 	ImGui::Checkbox("Change Light Color##lightcolor", &g_cfg->visuals.m_change_color_light);
-	if(g_cfg->visuals.m_change_color_light)
+	if (g_cfg->visuals.m_change_color_light)
 	{
 		ImGui::SameLine(); ImGui::ColorEdit4("##LightColor", g_cfg->visuals.m_color_light, with_alpha);
 	}
@@ -670,14 +706,16 @@ void c_menu::draw() {
 	float scale = m_dpi_scale;
 	ImVec2 window_size(m_main_window_size.x * scale, m_main_window_size.y * scale);
 
-	ImGui::SetNextWindowSize(window_size, ImGuiCond_Once);
+	ImGui::SetNextWindowSize(window_size, g_menu_window_size_dirty ? ImGuiCond_Always : ImGuiCond_Once);
 	ImGui::Begin("Nerv", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+	g_menu_window_size_dirty = false;
 
 	m_main_window_pos = ImGui::GetWindowPos();
 
 	ImGui::BeginChild("tabs", ImVec2(100.0f * scale, 0), true);
 	{
 		static constexpr const char* tabs[]{ "Skins", "Visuals", "Config","Settings" };
+		clamp_index(m_selected_tab, IM_ARRAYSIZE(tabs));
 
 		for (std::size_t i = 0; i < IM_ARRAYSIZE(tabs); ++i) {
 			if (ImGui::Selectable(tabs[i], m_selected_tab == static_cast<int>(i)))
